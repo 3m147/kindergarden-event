@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  /* iOS 가로 회전 시 폰트가 임의로 커지는 현상 방지 */
+  -webkit-text-size-adjust: 100%;
+  /* 모바일에서 의도치 않은 가로 스크롤 차단 */
+  overflow-x: hidden;
+}
+
+html,
+body {
+  min-height: 100dvh;
+  background-color: #FFFBEF; /* pastel.cream */
+}
+
+body {
+  /* 체크 중 iOS "당겨서 새로고침"이 실수로 발동하지 않도록 */
+  overscroll-behavior-y: contain;
+  /* 터치 시 파란색 플래시 제거 — 커스텀 active 스타일이 더 잘 보이게 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 인터랙션 요소의 모바일 기본 동작 정리:
+ *  - touch-action: manipulation → 더블탭 확대 방지로 탭 반응성↑
+ *  - user-select: none         → 실수로 텍스트가 선택되며 파란 박스가 뜨는 문제 방지
+ */
+button,
+[role="button"],
+[role="radio"] {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 프로필 사진을 길게 눌렀을 때 드래그 프리뷰가 뜨지 않도록 */
+img {
+  -webkit-user-drag: none;
+}
