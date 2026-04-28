@@ -12,7 +12,8 @@ import java.util.Optional;
 
 public interface RecitationRecordRepository extends JpaRepository<RecitationRecord, Long> {
 
-    Optional<RecitationRecord> findByStudentIdAndRecordDate(Long studentId, LocalDate date);
+    Optional<RecitationRecord> findByStudentIdAndRecordDateAndLessonNumberAndType(
+        Long studentId, LocalDate date, Integer lessonNumber, String type);
 
     @Query("""
         select r from RecitationRecord r

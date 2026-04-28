@@ -36,14 +36,14 @@ public class RecitationController {
         return service.getClassStatus(classId, date != null ? date : LocalDate.now());
     }
 
-    // 학생의 오늘 암송 상태 저장/수정 (토글 결과를 그대로 전달)
+    // 학생의 과별 암송/퀴즈 토글
     @PutMapping("/students/{studentId}/recitation")
     public StudentRecitationDto toggle(
             @PathVariable Long studentId,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody ToggleRequest body) {
-        return service.setRecitation(studentId, date != null ? date : LocalDate.now(), body.success());
+        return service.setRecitation(studentId, date != null ? date : LocalDate.now(), body.lessonNumber(), body.type(), body.success(), body.teacherId());
     }
 
     // 반의 오늘 기록 최종 제출
@@ -55,5 +55,19 @@ public class RecitationController {
         LocalDate target = date != null ? date : LocalDate.now();
         int updated = service.submitClass(classId, target);
         return Map.of("classId", classId, "date", target.toString(), "updated", updated);
+    }
+
+    // 관리자 대시보드 - 전체 반의 현황 조회
+    @GetMapping("/admin/scores")
+    public List<StudentRecitationDto> getAdminScores(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return service.getAllScores(date != null ? date : LocalDate.now());
+    }
+
+    // 관리자 프로필 관리 - 전체 교사/학생 프로필 조회
+    @GetMapping("/admin/profiles")
+    public List<com.kindergarden.recitation.dto.PersonProfileDto> getAllProfiles() {
+        return service.listAllProfiles();
     }
 }
