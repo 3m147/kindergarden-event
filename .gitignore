@@ -13,3 +13,10 @@ yarn-debug.log*
 yarn-error.log*
 target/
 .idea/
+
+# 빌드 산출물
+*.class
+*.tsbuildinfo
+
+# 업로드된 학생/교사 프로필 사진 (개인정보)
+backend/uploads/

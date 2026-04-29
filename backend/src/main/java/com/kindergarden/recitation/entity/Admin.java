@@ -6,26 +6,24 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "student", indexes = @Index(name = "idx_student_class", columnList = "class_id"))
+@Table(name = "admin")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
-public class Student {
+public class Admin {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "student_id")
+    @Column(name = "admin_id")
     private Long id;
+
+    @Column(name = "login_id", nullable = false, length = 50, unique = true)
+    private String loginId;
+
+    @Column(nullable = false, length = 255)
+    private String password;
 
     @Column(nullable = false, length = 50)
     private String name;
-
-    @Column(name = "photo_url", length = 500)
-    private String photoUrl;
-
-    // 학생 N : 반 1
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "class_id")
-    private ClassEntity classEntity;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

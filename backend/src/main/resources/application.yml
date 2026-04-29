@@ -3,13 +3,13 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/recitation_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3306/kindergaten?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
     username: root
-    password: changeme   # 로컬 DB 비밀번호로 교체
+    password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: validate   # schema.sql 로 테이블 관리. 개발 초기엔 update 로 바꿔도 무방.
+      ddl-auto: update   # 배포 시 테이블 자동 생성을 위해 update로 변경
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
@@ -18,3 +18,7 @@ spring:
   sql:
     init:
       mode: never          # schema.sql 수동 실행 권장. 자동 실행하려면 always.
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 100MB
