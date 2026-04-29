@@ -29,6 +29,10 @@ public class ProfileController {
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
 
+    // 운영 환경에선 APP_PUBLIC_URL=https://xxx.up.railway.app 같은 값으로 주입됨
+    @Value("${app.public-url:http://localhost:8080}")
+    private String publicUrl;
+
     @PostMapping("/upload")
     public ResponseEntity<?> uploadProfile(
             @RequestParam("file") MultipartFile file,
@@ -57,8 +61,8 @@ public class ProfileController {
             // 파일 저장
             file.transferTo(filePath.toAbsolutePath().toFile());
             
-            // 파일 URL (로컬 서버 기준)
-            String fileUrl = "http://localhost:8080/uploads/" + newFilename;
+            // 파일 URL — 백엔드 공개 주소 기준 (env: APP_PUBLIC_URL)
+            String fileUrl = publicUrl + "/uploads/" + newFilename;
 
             // DB 업데이트
             if ("teacher".equals(type)) {

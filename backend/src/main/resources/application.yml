@@ -1,24 +1,38 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/kindergaten?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
-    username: root
-    password: 1234
+    # 로컬 기본값 + Railway/운영에선 SPRING_DATASOURCE_URL 등 환경변수로 덮어씀
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/kindergaten?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:1234}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: update   # 배포 시 테이블 자동 생성을 위해 update로 변경
+      # 첫 배포: update (테이블 자동 생성). 이후엔 validate 권장.
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
-    show-sql: true
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
   sql:
     init:
-      mode: never          # schema.sql 수동 실행 권장. 자동 실행하려면 always.
+      mode: never
   servlet:
     multipart:
       max-file-size: 20MB
       max-request-size: 100MB
+
+# 사진 업로드 저장 경로 — Railway에선 Volume mount 경로(예: /data/uploads)로 덮어씀
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:uploads}
+
+app:
+  # 업로드 사진의 절대 URL을 만들 때 쓰는 백엔드 공개 주소.
+  # Railway 운영 시: APP_PUBLIC_URL=https://xxx.up.railway.app
+  public-url: ${APP_PUBLIC_URL:http://localhost:8080}
+  # CORS 허용 오리진 (콤마 구분). 운영 시 Vercel 도메인 추가.
+  # 예: APP_ALLOWED_ORIGINS=https://my-app.vercel.app,http://localhost:3000
+  allowed-origins: ${APP_ALLOWED_ORIGINS:http://localhost:3000}
