@@ -113,11 +113,6 @@ public class RecitationService {
     }
 
     @Transactional
-    public int submitClass(Long classId, LocalDate date) {
-        return recordRepository.markSubmittedByClassAndDate(classId, date);
-    }
-
-    @Transactional
     public StudentRecitationDto submitStudent(Long studentId, LocalDate date) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));

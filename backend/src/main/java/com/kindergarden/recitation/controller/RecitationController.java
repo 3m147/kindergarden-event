@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -44,17 +43,6 @@ public class RecitationController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestBody ToggleRequest body) {
         return service.setRecitation(studentId, date != null ? date : LocalDate.now(), body.lessonNumber(), body.type(), body.success(), body.teacherId());
-    }
-
-    // 반의 오늘 기록 최종 제출
-    @PostMapping("/classes/{classId}/submit")
-    public Map<String, Object> submit(
-            @PathVariable Long classId,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        LocalDate target = date != null ? date : LocalDate.now();
-        int updated = service.submitClass(classId, target);
-        return Map.of("classId", classId, "date", target.toString(), "updated", updated);
     }
 
     // 학생 1명의 오늘 기록 최종 제출

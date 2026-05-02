@@ -95,12 +95,6 @@ export const api = {
       { method: "PUT", body: JSON.stringify({ lessonNumber, type, success, teacherId }) }
     ),
 
-  submitClass: (classId: number, date?: string) =>
-    request<{ classId: number; date: string; updated: number }>(
-      `/api/classes/${classId}/submit${date ? `?date=${date}` : ""}`,
-      { method: "POST" }
-    ),
-
   submitStudent: (studentId: number, date?: string) =>
     request<StudentRecitationDto>(
       `/api/students/${studentId}/submit${date ? `?date=${date}` : ""}`,
