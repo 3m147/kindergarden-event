@@ -48,8 +48,10 @@ export default function AdminDashboardView() {
 
   if (!authenticated) return null;
 
-  // 반별로 그룹화
-  const classGroups = students.reduce<Record<number, { className: string; teacherName: string; students: StudentRecitationDto[] }>>((acc, s) => {
+  const submittedOnly = students.filter((s) => s.submitted);
+
+  // 최종 제출된 학생만 반별로 그룹화
+  const classGroups = submittedOnly.reduce<Record<number, { className: string; teacherName: string; students: StudentRecitationDto[] }>>((acc, s) => {
     if (!acc[s.classId]) acc[s.classId] = { className: s.className, teacherName: s.teacherName, students: [] };
     acc[s.classId].students.push(s);
     return acc;
@@ -57,8 +59,8 @@ export default function AdminDashboardView() {
 
   const classIds = Object.keys(classGroups).map(Number).sort();
   const totalStudents = students.length;
-  const submittedStudents = students.filter((s) => s.submitted).length;
-  const submittedClasses = classIds.filter((id) => classGroups[id].students.every((s) => s.submitted)).length;
+  const submittedStudents = submittedOnly.length;
+  const submittedClasses = classIds.length;
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-8">
@@ -99,23 +101,23 @@ export default function AdminDashboardView() {
       <section className="grid grid-cols-3 gap-3 px-5 pt-2">
         <StatCard icon={<Users className="h-5 w-5" />} label="전체 학생" value={`${totalStudents}명`} color="blue" />
         <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="제출 완료" value={`${submittedStudents}명`} color="green" />
-        <StatCard icon={<BookOpen className="h-5 w-5" />} label="반 제출률" value={`${submittedClasses}/${classIds.length}`} color="amber" />
+        <StatCard icon={<BookOpen className="h-5 w-5" />} label="제출 반" value={`${submittedClasses}반`} color="amber" />
       </section>
 
       {/* 반별 아코디언 */}
       <section className="mt-6 px-5">
         <h2 className="mb-3 text-base font-extrabold text-slate-300">📋 반별 점수 현황</h2>
         <div className="flex flex-col gap-3">
+          {classIds.length === 0 && (
+            <div className="rounded-2xl bg-slate-800 px-4 py-8 text-center text-sm font-bold text-slate-500 ring-1 ring-slate-700">
+              아직 최종 제출된 학생이 없습니다.
+            </div>
+          )}
           {classIds.map((classId) => {
             const group = classGroups[classId];
             const isExpanded = expandedClass === classId;
-            const allSubmitted = group.students.every((s) => s.submitted);
-            const avgRecitation = allSubmitted
-              ? Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.lessonStates), 0) / group.students.length * 10) / 10
-              : 0;
-            const avgQuiz = allSubmitted
-              ? Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.quizStates), 0) / group.students.length * 10) / 10
-              : 0;
+            const avgRecitation = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.lessonStates), 0) / group.students.length * 10) / 10;
+            const avgQuiz = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.quizStates), 0) / group.students.length * 10) / 10;
 
             return (
               <div key={classId} className="overflow-hidden rounded-2xl bg-slate-800 ring-1 ring-slate-700">
@@ -128,26 +130,24 @@ export default function AdminDashboardView() {
                   <div className="flex items-center gap-3">
                     <span className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-lg text-sm font-extrabold",
-                      allSubmitted ? "bg-emerald-500/20 text-emerald-400" : "bg-orange-500/20 text-orange-400"
+                      "bg-emerald-500/20 text-emerald-400"
                     )}>
-                      {allSubmitted ? "✓" : "⏳"}
+                      ✓
                     </span>
                     <div>
                       <p className="text-sm font-extrabold text-white">{group.className}</p>
                       <p className="text-xs text-slate-400">
-                        {group.teacherName} 선생님 · {group.students.length}명
+                        {group.teacherName || "담당"} 선생님 · 제출 {group.students.length}명
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    {allSubmitted && (
-                      <div className="hidden text-right sm:block">
-                        <p className="text-xs text-slate-400">평균 암송 <span className="font-bold text-emerald-400">{avgRecitation}</span>/{TOTAL_LESSONS}</p>
-                        <p className="text-xs text-slate-400">평균 퀴즈 <span className="font-bold text-sky-400">{avgQuiz}</span>/{TOTAL_LESSONS}</p>
-                      </div>
-                    )}
-                    {!allSubmitted && (
-                      <span className="rounded-lg bg-orange-500/20 px-2 py-1 text-xs font-bold text-orange-400">미제출</span>
+                    <div className="hidden text-right sm:block">
+                      <p className="text-xs text-slate-400">평균 암송 <span className="font-bold text-emerald-400">{avgRecitation}</span>/{TOTAL_LESSONS}</p>
+                      <p className="text-xs text-slate-400">평균 퀴즈 <span className="font-bold text-sky-400">{avgQuiz}</span>/{TOTAL_LESSONS}</p>
+                    </div>
+                    {group.students.length > 0 && (
+                      <span className="rounded-lg bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-400">제출됨</span>
                     )}
                     {isExpanded ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
                   </div>
@@ -156,13 +156,8 @@ export default function AdminDashboardView() {
                 {/* 학생 목록 */}
                 {isExpanded && (
                   <div className="border-t border-slate-700 px-4 pb-4 pt-3">
-                    {!allSubmitted ? (
-                      <p className="py-4 text-center text-sm text-slate-500">
-                        아직 선생님이 점수를 제출하지 않았습니다.
-                      </p>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {group.students.map((student) => {
+                    <div className="flex flex-col gap-2">
+                      {group.students.map((student) => {
                           const recitationScore = countSuccess(student.lessonStates);
                           const quizScore = countSuccess(student.quizStates);
                           const isStudentExpanded = expandedStudent === student.studentId;
@@ -233,9 +228,8 @@ export default function AdminDashboardView() {
                               )}
                             </div>
                           );
-                        })}
-                      </div>
-                    )}
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

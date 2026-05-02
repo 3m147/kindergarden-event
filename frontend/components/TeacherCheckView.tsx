@@ -66,9 +66,9 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
   const [modalStudentId, setModalStudentId] = React.useState<number | null>(null);
   const [quizModalStudentId, setQuizModalStudentId] = React.useState<number | null>(null);
   const [actionStudentId, setActionStudentId] = React.useState<number | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
+  const [submittingStudentId, setSubmittingStudentId] = React.useState<number | null>(null);
   // 브라우저 기본 confirm/alert 대신 부드러운 모달/토스트로 대체
-  const [showSubmitConfirm, setShowSubmitConfirm] = React.useState(false);
+  const [submitConfirmStudentId, setSubmitConfirmStudentId] = React.useState<number | null>(null);
   const [toast, setToast] = React.useState<{ kind: "success" | "error"; text: string } | null>(null);
 
   // 토스트 자동 사라짐 (3초)
@@ -116,6 +116,8 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
     students.find((s) => s.studentId === quizModalStudentId) ?? null;
   const actionStudent =
     students.find((s) => s.studentId === actionStudentId) ?? null;
+  const submitConfirmStudent =
+    students.find((s) => s.studentId === submitConfirmStudentId) ?? null;
 
   // 모든 과(1~16)에 대해 success/fail 표시가 끝난 학생 수 — 진행률 표시용
   const isAllChecked = (states?: Record<number, "success" | "fail">) =>
@@ -123,7 +125,6 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
   const recitationDone = students.filter((s) => isAllChecked(s.lessonStates)).length;
   const quizDone = students.filter((s) => isAllChecked(s.quizStates)).length;
   const totalCount = students.length;
-  const alreadySubmitted = students.length > 0 && students.every((s) => s.submitted);
 
   // 학생 프로필 탭: 상단 프로필 동기화 + 액션 시트 오픈
   const handleSelect = (student: StudentRecitationDto) => {
@@ -253,22 +254,33 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
     }
   };
 
-  const handleSubmitClick = () => {
-    if (submitting || alreadySubmitted) return;
-    setShowSubmitConfirm(true);
+  const hasAnyRecord = (student: StudentRecitationDto) =>
+    Object.keys(student.lessonStates ?? {}).length > 0 ||
+    Object.keys(student.quizStates ?? {}).length > 0;
+
+  const handleSubmitClick = (student: StudentRecitationDto) => {
+    if (submittingStudentId !== null || student.submitted || !hasAnyRecord(student)) return;
+    setSubmitConfirmStudentId(student.studentId);
   };
 
   const handleSubmitConfirm = async () => {
-    setShowSubmitConfirm(false);
-    setSubmitting(true);
+    if (!submitConfirmStudent) return;
+    const studentId = submitConfirmStudent.studentId;
+    setSubmitConfirmStudentId(null);
+    setSubmittingStudentId(studentId);
     try {
-      await api.submitClass(selectedClassId);
-      setStudents((prev) => prev.map((s) => ({ ...s, submitted: true })));
-      setToast({ kind: "success", text: "최종 제출 완료! 전광판에 곧 반영돼요 🎉" });
+      const updated = await api.submitStudent(studentId);
+      setStudents((prev) => prev.map((s) => (s.studentId === studentId ? {
+        ...s,
+        ...updated,
+        success: isAllChecked(updated.lessonStates),
+        quizSuccess: isAllChecked(updated.quizStates)
+      } : s)));
+      setToast({ kind: "success", text: `${updated.name} 최종 제출 완료! 관리자 화면에 반영돼요.` });
     } catch (e) {
       setToast({ kind: "error", text: "제출 중 오류가 발생했어요. 다시 시도해 주세요." });
     } finally {
-      setSubmitting(false);
+      setSubmittingStudentId(null);
     }
   };
 
@@ -330,16 +342,19 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
                 student={s}
                 active={s.studentId === activeStudent?.studentId}
                 onTap={() => handleSelect(s)}
+                onSubmit={() => handleSubmitClick(s)}
+                submitting={submittingStudentId === s.studentId}
+                canSubmit={hasAnyRecord(s)}
               />
             ))}
           </ul>
         )}
       </section>
 
-      {/* 하단 고정 액션 바 */}
+      {/* 하단 고정 진행률 바 */}
       <nav
         className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-pastel-yellowDeep/30 bg-white/95 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 backdrop-blur"
-        aria-label="제출 영역"
+        aria-label="진행률 영역"
       >
         {/* 암송/퀴즈 진행률을 분리해서 표기 — "어디까지 했지?"가 한 번에 보이도록 */}
         <div className="mb-3 grid grid-cols-2 gap-2">
@@ -358,23 +373,6 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
             color="blue"
           />
         </div>
-        <button
-          type="button"
-          onClick={handleSubmitClick}
-          disabled={submitting || alreadySubmitted || totalCount === 0}
-          className={cn(
-            "flex h-16 w-full items-center justify-center rounded-2xl text-xl font-extrabold text-white shadow-soft transition",
-            "bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep",
-            "active:scale-[0.98]",
-            "disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500"
-          )}
-        >
-          {alreadySubmitted
-            ? "이미 제출됨"
-            : submitting
-              ? "제출 중..."
-              : "최종 제출하기"}
-        </button>
       </nav>
 
       {/* 액션 시트 (암송 / 퀴즈 선택) */}
@@ -408,14 +406,14 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
       )}
 
       {/* 제출 확인 모달 — 브라우저 confirm 대신 톤에 맞춘 다이얼로그 */}
-      {showSubmitConfirm && (
+      {submitConfirmStudent && (
         <ConfirmDialog
           title="최종 제출할까요?"
-          description={`오늘 ${className}의 암송 결과를\n제출 후에는 수정할 수 없어요.`}
+          description={`${submitConfirmStudent.name}의 오늘 암송 결과를\n제출 후에는 수정할 수 없어요.`}
           confirmText="제출하기"
           cancelText="다시 볼게요"
           onConfirm={handleSubmitConfirm}
-          onCancel={() => setShowSubmitConfirm(false)}
+          onCancel={() => setSubmitConfirmStudentId(null)}
         />
       )}
 
@@ -515,10 +513,16 @@ function StudentTile({
   student,
   active,
   onTap,
+  onSubmit,
+  submitting,
+  canSubmit,
 }: {
   student: StudentRecitationDto;
   active: boolean;
   onTap: () => void;
+  onSubmit: () => void;
+  submitting: boolean;
+  canSubmit: boolean;
 }) {
   const done = student.success;
   const quizDone = student.quizSuccess;
@@ -527,7 +531,7 @@ function StudentTile({
   const quizScore = Object.values(student.quizStates ?? {}).filter(s => s === 'success').length;
 
   return (
-    <li>
+    <li className="flex flex-col gap-1.5">
       <button
         type="button"
         onClick={onTap}
@@ -569,6 +573,22 @@ function StudentTile({
             )}
           </div>
         </div>
+      </button>
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={student.submitted || submitting || !canSubmit}
+        className={cn(
+          "h-9 rounded-2xl text-[11px] font-extrabold shadow-sm transition active:scale-95",
+          student.submitted
+            ? "bg-slate-200 text-slate-500"
+            : canSubmit
+              ? "bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep text-white"
+              : "bg-slate-100 text-slate-400",
+          "disabled:active:scale-100"
+        )}
+      >
+        {student.submitted ? "제출됨" : submitting ? "제출 중..." : "최종 제출"}
       </button>
     </li>
   );

@@ -57,6 +57,15 @@ public class RecitationController {
         return Map.of("classId", classId, "date", target.toString(), "updated", updated);
     }
 
+    // 학생 1명의 오늘 기록 최종 제출
+    @PostMapping("/students/{studentId}/submit")
+    public StudentRecitationDto submitStudent(
+            @PathVariable Long studentId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return service.submitStudent(studentId, date != null ? date : LocalDate.now());
+    }
+
     // 관리자 대시보드 - 전체 반의 현황 조회
     @GetMapping("/admin/scores")
     public List<StudentRecitationDto> getAdminScores(

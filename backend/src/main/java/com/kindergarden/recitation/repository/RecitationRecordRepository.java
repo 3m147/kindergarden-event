@@ -29,4 +29,12 @@ public interface RecitationRecordRepository extends JpaRepository<RecitationReco
     """)
     int markSubmittedByClassAndDate(@Param("classId") Long classId,
                                     @Param("date") LocalDate date);
+
+    @Modifying
+    @Query("""
+        update RecitationRecord r set r.submitted = true
+        where r.student.id = :studentId and r.recordDate = :date
+    """)
+    int markSubmittedByStudentAndDate(@Param("studentId") Long studentId,
+                                      @Param("date") LocalDate date);
 }
