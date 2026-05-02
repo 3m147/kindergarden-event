@@ -11,7 +11,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, XCircle, ArrowLeft, Camera } from "lucide-react";
-import { api, type StudentRecitationDto } from "@/lib/api";
+import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
 const TOTAL_LESSONS = 16;
 
@@ -177,7 +177,7 @@ export default function AdminDashboardView() {
                                 <div className="flex items-center gap-2.5">
                                   <div className="h-9 w-9 overflow-hidden rounded-full border-2 border-slate-600 bg-white">
                                     <img
-                                      src={student.photoUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(student.name)}&backgroundColor=ffecb3,cdefc4,cde7fb`}
+                                      src={resolveMediaUrl(student.photoUrl) || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(student.name)}&backgroundColor=ffecb3,cdefc4,cde7fb`}
                                       alt={student.name} className="h-full w-full object-cover" draggable={false}
                                     />
                                   </div>
