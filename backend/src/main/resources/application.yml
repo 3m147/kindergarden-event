@@ -1,5 +1,6 @@
 server:
-  port: ${SERVER_PORT:8080}
+  # Railway 는 컨테이너에 PORT 를 동적으로 주입함. 일반 Spring 환경변수(SERVER_PORT)도 호환되도록 둘 다 fallback 처리.
+  port: ${PORT:${SERVER_PORT:8080}}
 
 spring:
   datasource:
