@@ -279,6 +279,11 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
     }
   };
 
+  const handleBackToLogin = () => {
+    localStorage.removeItem("teacher_info");
+    router.replace("/");
+  };
+
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-md bg-pastel-cream pb-36">
       {/* 상단: 반 이름 + 타이틀 */}
@@ -298,9 +303,9 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
           </div>
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={handleBackToLogin}
             className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-700 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
-            aria-label="뒤로 가기"
+            aria-label="로그인 화면으로 이동"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
