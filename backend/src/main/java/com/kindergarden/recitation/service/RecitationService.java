@@ -79,33 +79,42 @@ public class RecitationService {
     }
 
     @Transactional
-    public StudentRecitationDto setRecitation(Long studentId, LocalDate date, Integer lessonNumber, String type, boolean success, Long teacherId) {
-        RecitationRecord record = recordRepository
-                .findByStudentIdAndRecordDateAndLessonNumberAndType(studentId, date, lessonNumber, type)
-                .orElseGet(() -> {
-                    Student s = studentRepository.findById(studentId)
-                            .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
-                    Teacher t = teacherRepository.findById(teacherId)
-                            .orElseThrow(() -> new IllegalArgumentException("교사 없음: " + teacherId));
-                    return RecitationRecord.builder()
-                            .student(s)
-                            .recordDate(date)
-                            .lessonNumber(lessonNumber)
-                            .type(type)
-                            .teacher(t)
-                            .submitted(false)
-                            .build();
-                });
+    public StudentRecitationDto setRecitation(Long studentId, LocalDate date, Integer lessonNumber, String type, Boolean success, Long teacherId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
+        var existing = recordRepository.findByStudentIdAndRecordDateAndLessonNumberAndType(studentId, date, lessonNumber, type);
 
-        if (record.isSubmitted()) {
+        if (existing.map(RecitationRecord::isSubmitted).orElse(false)) {
             throw new IllegalStateException("이미 제출된 기록은 수정할 수 없습니다.");
         }
+
+        if (success == null) {
+            existing.ifPresent(recordRepository::delete);
+            return getClassStatus(student.getClassEntity().getId(), date)
+                    .stream()
+                    .filter(dto -> dto.studentId().equals(studentId))
+                    .findFirst()
+                    .orElseThrow();
+        }
+
+        RecitationRecord record = existing.orElseGet(() -> {
+            Teacher t = teacherRepository.findById(teacherId)
+                    .orElseThrow(() -> new IllegalArgumentException("교사 없음: " + teacherId));
+            return RecitationRecord.builder()
+                    .student(student)
+                    .recordDate(date)
+                    .lessonNumber(lessonNumber)
+                    .type(type)
+                    .teacher(t)
+                    .submitted(false)
+                    .build();
+        });
 
         record.setResult(success ? "SUCCESS" : "FAIL");
         recordRepository.save(record);
         
         // Return full status for this student
-        return getClassStatus(record.getStudent().getClassEntity().getId(), date)
+        return getClassStatus(student.getClassEntity().getId(), date)
                 .stream()
                 .filter(dto -> dto.studentId().equals(studentId))
                 .findFirst()

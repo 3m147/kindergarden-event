@@ -31,6 +31,13 @@ import { cn } from "@/lib/cn";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
 const TOTAL_LESSONS = 16;
+type ToggleState = "success" | "fail" | undefined;
+
+function nextToggleState(current: ToggleState): ToggleState {
+  if (!current) return "success";
+  if (current === "success") return "fail";
+  return undefined;
+}
 
 // "4월 29일 (수)" 같은 친근한 한국어 날짜 — 헤더에서 선생님이 오늘 체크 중임을 한눈에 인지하도록
 function todayLabel() {
@@ -177,18 +184,12 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
   const handleToggleQuiz = async (quizNum: number) => {
     if (!quizModalStudent) return;
     const studentId = quizModalStudent.studentId;
-
-    let nextState: 'success' | 'fail' | undefined;
+    const nextState = nextToggleState(quizModalStudent.quizStates?.[quizNum]);
 
     setStudents((prev) =>
       prev.map((s) => {
         if (s.studentId !== studentId) return s;
         const currentStates = s.quizStates || {};
-        const currentState = currentStates[quizNum];
-        if (!currentState) nextState = 'success';
-        else if (currentState === 'success') nextState = 'fail';
-        else nextState = undefined;
-
         const newStates = { ...currentStates };
         if (nextState) newStates[quizNum] = nextState;
         else delete newStates[quizNum];
@@ -205,7 +206,7 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
         studentId, 
         quizNum, 
         "QUIZ", 
-        nextState === 'success', 
+        nextState === undefined ? null : nextState === 'success',
         teacherInfo?.id || 1
       );
     } catch (e) {
@@ -217,18 +218,12 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
   const handleToggleLesson = async (lessonNum: number) => {
     if (!modalStudent) return;
     const studentId = modalStudent.studentId;
-
-    let nextState: 'success' | 'fail' | undefined;
+    const nextState = nextToggleState(modalStudent.lessonStates?.[lessonNum]);
 
     setStudents((prev) =>
       prev.map((s) => {
         if (s.studentId !== studentId) return s;
         const currentStates = s.lessonStates || {};
-        const currentState = currentStates[lessonNum];
-        if (!currentState) nextState = 'success';
-        else if (currentState === 'success') nextState = 'fail';
-        else nextState = undefined;
-
         const newStates = { ...currentStates };
         if (nextState) newStates[lessonNum] = nextState;
         else delete newStates[lessonNum];
@@ -246,7 +241,7 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
         studentId, 
         lessonNum, 
         "RECITATION", 
-        nextState === 'success', 
+        nextState === undefined ? null : nextState === 'success',
         teacherInfo?.id || 1
       );
     } catch (e) {

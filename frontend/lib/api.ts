@@ -89,7 +89,7 @@ export const api = {
       `/api/classes/${classId}/recitations${date ? `?date=${date}` : ""}`
     ),
 
-  toggleRecitation: (studentId: number, lessonNumber: number, type: string, success: boolean, teacherId: number, date?: string) =>
+  toggleRecitation: (studentId: number, lessonNumber: number, type: string, success: boolean | null, teacherId: number, date?: string) =>
     request<StudentRecitationDto>(
       `/api/students/${studentId}/recitation${date ? `?date=${date}` : ""}`,
       { method: "PUT", body: JSON.stringify({ lessonNumber, type, success, teacherId }) }
