@@ -117,6 +117,21 @@ public class RecitationService {
         return recordRepository.markSubmittedByClassAndDate(classId, date);
     }
 
+    @Transactional
+    public StudentRecitationDto submitStudent(Long studentId, LocalDate date) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
+        int updated = recordRepository.markSubmittedByStudentAndDate(studentId, date);
+        if (updated == 0) {
+            throw new IllegalStateException("제출할 기록이 없습니다.");
+        }
+        return getClassStatus(student.getClassEntity().getId(), date)
+                .stream()
+                .filter(dto -> dto.studentId().equals(studentId))
+                .findFirst()
+                .orElseThrow();
+    }
+
     @Transactional(readOnly = true)
     public List<StudentRecitationDto> getAllScores(LocalDate date) {
         List<ClassDto> classes = listClasses();
