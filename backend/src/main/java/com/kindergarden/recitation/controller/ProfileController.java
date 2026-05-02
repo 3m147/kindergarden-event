@@ -62,7 +62,12 @@ public class ProfileController {
             file.transferTo(filePath.toAbsolutePath().toFile());
             
             // 파일 URL — 백엔드 공개 주소 기준 (env: APP_PUBLIC_URL)
-            String fileUrl = publicUrl + "/uploads/" + newFilename;
+            String normalizedPublicUrl = publicUrl.trim();
+            if (!normalizedPublicUrl.startsWith("http://") && !normalizedPublicUrl.startsWith("https://")) {
+                normalizedPublicUrl = "https://" + normalizedPublicUrl;
+            }
+            normalizedPublicUrl = normalizedPublicUrl.replaceAll("/+$", "");
+            String fileUrl = normalizedPublicUrl + "/uploads/" + newFilename;
 
             // DB 업데이트
             if ("teacher".equals(type)) {

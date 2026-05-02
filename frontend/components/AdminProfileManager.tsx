@@ -12,7 +12,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Shield, LogOut, ArrowLeft, Camera, Upload, X, ChevronDown, ChevronUp, Users, GraduationCap, Trash2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, resolveMediaUrl } from "@/lib/api";
 
 // --- 더미 데이터 (DB 연동 전) ---
 type Person = {
@@ -71,9 +71,9 @@ export default function AdminProfileManager() {
           const saved = localStorage.getItem(key);
           if (p.photoUrl) {
             // 서버에 사진이 있으면 서버 URL 사용
-            loaded[key] = p.photoUrl;
+            loaded[key] = resolveMediaUrl(p.photoUrl);
           } else if (saved) {
-            loaded[key] = saved;
+            loaded[key] = resolveMediaUrl(saved);
           }
         });
         setPhotos(loaded);
@@ -129,8 +129,9 @@ export default function AdminProfileManager() {
         const id = parseInt(idStr, 10);
         
         const res = await api.uploadProfile(file, type, id);
-        localStorage.setItem(key, res.url);
-        setPhotos((prev) => ({ ...prev, [key]: res.url }));
+        const resolvedUrl = resolveMediaUrl(res.url);
+        localStorage.setItem(key, resolvedUrl);
+        setPhotos((prev) => ({ ...prev, [key]: resolvedUrl }));
         successCount++;
       }
       setPendingFiles({});

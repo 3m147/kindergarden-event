@@ -2,6 +2,15 @@
 // 환경변수로 베이스 URL 분리 — 개발 중엔 localhost:8080, 배포 시엔 .env.production 에서 덮어쓴다.
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
+export function resolveMediaUrl(url?: string | null) {
+  const value = url?.trim();
+  if (!value) return "";
+  if (/^(https?:|blob:|data:)/i.test(value)) return value;
+  if (value.startsWith("//")) return `https:${value}`;
+  if (value.startsWith("/")) return `${BASE}${value}`;
+  return `https://${value}`;
+}
+
 export type ClassDto = { classId: number; className: string };
 
 export type StudentRecitationDto = {

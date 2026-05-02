@@ -28,7 +28,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { api, type StudentRecitationDto } from "@/lib/api";
+import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
 const TOTAL_LESSONS = 16;
 
@@ -942,7 +942,7 @@ function StudentActionSheet({
  */
 function StudentAvatar({ name, photoUrl }: { name: string; photoUrl?: string }) {
   const seed = encodeURIComponent(name);
-  const src = photoUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=ffecb3,fff4b8,cdefc4,cde7fb,fcd5e0`;
+  const src = resolveMediaUrl(photoUrl) || `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=ffecb3,fff4b8,cdefc4,cde7fb,fcd5e0`;
   // 외부 SVG 는 next/image 설정을 건드리지 않도록 일반 img 태그로 표시.
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={src} alt="" className="h-full w-full object-cover" draggable={false} />;

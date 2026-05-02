@@ -14,7 +14,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Eye, EyeOff, LogIn, Sparkles } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, resolveMediaUrl } from "@/lib/api";
 
 function todayLabel() {
   const d = new Date();
@@ -62,7 +62,7 @@ export default function StartView() {
         role: response.role as "정교사" | "부교사",
         classId: response.classId!,
         className: response.className!,
-        photoUrl: response.photoUrl
+        photoUrl: resolveMediaUrl(response.photoUrl)
       };
       
       // 상태 저장
@@ -88,7 +88,7 @@ export default function StartView() {
           {/* 환영 아바타 */}
           <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-pastel-greenDeep bg-white shadow-soft">
             <img
-              src={loggedIn.photoUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(loggedIn.name)}&backgroundColor=ffecb3,cdefc4,cde7fb`}
+              src={resolveMediaUrl(loggedIn.photoUrl) || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(loggedIn.name)}&backgroundColor=ffecb3,cdefc4,cde7fb`}
               alt=""
               className="h-full w-full object-cover"
               draggable={false}
