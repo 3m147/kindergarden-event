@@ -1,5 +1,6 @@
 package com.kindergarden.recitation.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -11,11 +12,16 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    // 콤마로 구분된 허용 오리진. 운영: APP_ALLOWED_ORIGINS=https://xxx.vercel.app,http://localhost:3000
+    @Value("${app.allowed-origins:http://localhost:3000}")
+    private String allowedOrigins;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -28,7 +34,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll() // 모든 요청 허용 (간이 인증 방식 사용)
+                .anyRequest().permitAll() // 인증은 컨트롤러에서 직접 처리 (간이 방식)
             );
         return http.build();
     }
@@ -36,7 +42,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*")); // 프론트엔드 포트 등 모든 오리진 허용 (개발용)
+        // setAllowedOriginPatterns: credentials=true 와 함께 쓰려면 wildcard 가 아닌 패턴 매칭이 필요해서 Origins 대신 사용
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

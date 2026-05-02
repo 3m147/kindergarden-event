@@ -19,6 +19,8 @@
 
     <properties>
         <java.version>17</java.version>
+        <!-- Spring Boot 3.3.4 가 기본 1.18.34 를 끌어오는데 JDK 21+ 환경에서 컴파일 시 TypeTag 에러를 일으켜 명시적으로 최신 버전 사용 -->
+        <lombok.version>1.18.38</lombok.version>
     </properties>
 
     <dependencies>
@@ -64,6 +66,18 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
         </plugins>
     </build>
