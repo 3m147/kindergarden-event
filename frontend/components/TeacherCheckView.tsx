@@ -26,7 +26,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, HelpCircle } from "lucide-react";
+import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, HelpCircle, Sparkles, Sun } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
@@ -285,16 +285,24 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
   };
 
   return (
-    <main className="mx-auto min-h-[100dvh] w-full max-w-md bg-pastel-cream pb-36">
+    <main className="relative mx-auto min-h-[100dvh] w-full max-w-md overflow-hidden bg-gradient-to-b from-pastel-cream via-pastel-yellow/30 to-pastel-pink/20 pb-36">
+      {/* 배경 데코 — 부드러운 색 원형 블롭 */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-16 -left-10 h-48 w-48 rounded-full bg-pastel-yellow/40 blur-3xl" />
+        <div className="absolute top-32 -right-12 h-40 w-40 rounded-full bg-pastel-pink/40 blur-3xl" />
+        <div className="absolute top-[60%] -left-16 h-44 w-44 rounded-full bg-pastel-green/30 blur-3xl" />
+      </div>
+
       {/* 상단: 반 이름 + 타이틀 */}
-      <header className="sticky top-0 z-20 bg-pastel-cream/95 px-5 pb-3 pt-[max(env(safe-area-inset-top),1.25rem)] backdrop-blur">
+      <header className="sticky top-0 z-20 bg-pastel-cream/85 px-5 pb-3 pt-[max(env(safe-area-inset-top),1.25rem)] backdrop-blur">
         <div className="relative flex items-center justify-center">
           <div className="text-center">
-            <p className="text-[11px] font-bold tracking-[0.15em] text-pastel-yellowDeep sm:text-xs">
+            <p className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 text-[11px] font-bold tracking-[0.12em] text-pastel-yellowDeep shadow-sm ring-1 ring-pastel-yellow/60 sm:text-xs">
+              <Sun className="h-3 w-3" />
               {todayLabel()} · {className}
             </p>
-            <h1 className="mt-1 text-xl font-extrabold text-slate-800 sm:text-2xl">
-              오늘의 암송 체크
+            <h1 className="mt-2 text-xl font-extrabold text-slate-800 sm:text-2xl">
+              오늘의 암송 체크 <span className="ml-0.5">📖</span>
             </h1>
             <p className="mt-1 text-xs text-slate-500">
               학생을 눌러 <span className="font-bold text-pastel-greenDeep">암송</span> ·
@@ -304,7 +312,7 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
           <button
             type="button"
             onClick={handleBackToLogin}
-            className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-700 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
+            className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-white active:scale-95"
             aria-label="로그인 화면으로 이동"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -313,26 +321,39 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
       </header>
 
       {/* 중앙 상단: 선생님 프로필 영역 */}
-      <section className="flex flex-col items-center justify-center px-5 pt-6 pb-2">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-24 w-24 sm:h-28 sm:w-28 overflow-hidden rounded-full border-[4px] border-pastel-greenDeep bg-white shadow-soft">
-            {teacherInfo ? (
-              <StudentAvatar name={teacherInfo.name} photoUrl={teacherInfo.photoUrl} />
-            ) : (
-              <StudentAvatar name="선생님" />
-            )}
+      <section className="relative flex flex-col items-center justify-center px-5 pt-6 pb-2">
+        <div className="relative flex flex-col items-center gap-2">
+          {/* 프로필 둘레 빛나는 링 */}
+          <div className="relative">
+            <div aria-hidden className="absolute -inset-1.5 rounded-full bg-gradient-to-tr from-pastel-greenDeep via-pastel-yellowDeep to-pastel-blueDeep opacity-70 blur-[2px]" />
+            <div className="relative h-24 w-24 sm:h-28 sm:w-28 overflow-hidden rounded-full border-[4px] border-white bg-white shadow-soft">
+              {teacherInfo ? (
+                <StudentAvatar name={teacherInfo.name} photoUrl={teacherInfo.photoUrl} />
+              ) : (
+                <StudentAvatar name="선생님" />
+              )}
+            </div>
+            {/* 반짝 데코 */}
+            <Sparkles aria-hidden className="absolute -right-1 -top-1 h-5 w-5 text-pastel-yellowDeep drop-shadow" />
           </div>
-          <span className="text-sm font-bold text-slate-700">
-            {teacherInfo ? `${teacherInfo.name} 선생님` : "선생님"}
-          </span>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-sm font-extrabold text-slate-700">
+              {teacherInfo ? `${teacherInfo.name} 선생님` : "선생님"}
+            </span>
+            <span className="text-[11px] text-slate-500">오늘도 화이팅이에요 💛</span>
+          </div>
         </div>
       </section>
 
       {/* 학생 프로필 그리드 */}
-      <section className="mt-5 px-4 sm:mt-6 sm:px-5" aria-label="학생 선택">
+      <section className="relative mt-5 px-4 sm:mt-6 sm:px-5" aria-label="학생 선택">
         {students.length === 0 ? (
-          <div className="rounded-2xl bg-white p-8 text-center text-slate-500 shadow-soft">
-            이 반의 학생 정보가 아직 없어요.
+          <div className="rounded-3xl bg-white/80 p-10 text-center shadow-soft ring-1 ring-pastel-yellow/40 backdrop-blur">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-pastel-yellow/60 text-2xl">
+              🌱
+            </div>
+            <p className="text-sm font-bold text-slate-600">이 반의 학생 정보가 아직 없어요</p>
+            <p className="mt-1 text-xs text-slate-400">관리자에게 학생 등록을 요청해 주세요</p>
           </div>
         ) : (
           <ul className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -353,11 +374,11 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
 
       {/* 하단 고정 진행률 바 */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-pastel-yellowDeep/30 bg-white/95 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 backdrop-blur"
+        className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md rounded-t-3xl border-t border-pastel-yellowDeep/30 bg-white/95 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-4 shadow-soft backdrop-blur"
         aria-label="진행률 영역"
       >
         {/* 암송/퀴즈 진행률을 분리해서 표기 — "어디까지 했지?"가 한 번에 보이도록 */}
-        <div className="mb-3 grid grid-cols-2 gap-2">
+        <div className="mb-2 grid grid-cols-2 gap-2">
           <ProgressBar
             icon={<BookOpen className="h-4 w-4" />}
             label="암송"
@@ -529,6 +550,8 @@ function StudentTile({
   const allDone = done && quizDone;
   const score = Object.values(student.lessonStates ?? {}).filter(s => s === 'success').length;
   const quizScore = Object.values(student.quizStates ?? {}).filter(s => s === 'success').length;
+  const recitationCount = Object.keys(student.lessonStates ?? {}).length;
+  const quizCount = Object.keys(student.quizStates ?? {}).length;
 
   return (
     <li className="flex flex-col gap-1.5">
@@ -539,38 +562,46 @@ function StudentTile({
         aria-label={`${student.name} 과 선택 열기`}
         disabled={student.submitted}
         className={cn(
-          "flex w-full flex-col items-center gap-1.5 rounded-3xl bg-white p-2 shadow-soft transition sm:gap-2 sm:p-3",
+          "group relative flex w-full flex-col items-center gap-1.5 overflow-hidden rounded-3xl p-2 shadow-soft ring-1 ring-white/60 transition sm:gap-2 sm:p-3",
           "active:scale-95 disabled:opacity-60",
-          allDone && "bg-pastel-green/60",
+          allDone
+            ? "bg-gradient-to-b from-pastel-green/70 to-pastel-green/40"
+            : student.submitted
+              ? "bg-slate-50"
+              : "bg-white/90 backdrop-blur",
           active && "ring-4 ring-pastel-yellowDeep/60"
         )}
       >
+        {/* 완료된 학생 카드의 우상단 별 데코 */}
+        {allDone && (
+          <Sparkles aria-hidden className="absolute right-1.5 top-1.5 h-3.5 w-3.5 text-pastel-yellowDeep" />
+        )}
         <div
           className={cn(
-            "relative h-16 w-16 overflow-hidden rounded-full border-[4px] transition-colors sm:h-20 sm:w-20",
-            allDone ? "border-pastel-greenDeep" : done ? "border-pastel-greenDeep/50" : quizDone ? "border-pastel-blueDeep/50" : "border-white"
+            "relative h-16 w-16 overflow-hidden rounded-full border-[4px] bg-white transition-colors sm:h-20 sm:w-20",
+            allDone ? "border-pastel-greenDeep" : done ? "border-pastel-greenDeep/60" : quizDone ? "border-pastel-blueDeep/60" : "border-white"
           )}
         >
           <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
           {allDone && (
-            <span key={JSON.stringify(student.lessonStates) + JSON.stringify(student.quizStates)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/30">
+            <span key={JSON.stringify(student.lessonStates) + JSON.stringify(student.quizStates)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/40">
               <Check className="h-7 w-7 text-white drop-shadow sm:h-8 sm:w-8" strokeWidth={3} />
             </span>
           )}
         </div>
         <div className="flex flex-col items-center">
-          <span className="text-xs font-bold text-slate-800 sm:text-sm">{student.name}</span>
-          <div className="flex items-center gap-1 mt-0.5">
-            {done && (
-              <span className="text-[10px] sm:text-[11px] font-extrabold text-pastel-greenDeep">
-                📖{score}
-              </span>
-            )}
-            {quizDone && (
-              <span className="text-[10px] sm:text-[11px] font-extrabold text-pastel-blueDeep">
-                ❓{quizScore}
-              </span>
-            )}
+          <span className="text-xs font-extrabold text-slate-800 sm:text-sm">{student.name}</span>
+          <div className="mt-0.5 flex items-center gap-1">
+            {done ? (
+              <span className="text-[10px] font-extrabold text-pastel-greenDeep sm:text-[11px]">📖 {score}</span>
+            ) : recitationCount > 0 ? (
+              <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">📖 {recitationCount}/{TOTAL_LESSONS}</span>
+            ) : null}
+            {quizDone ? (
+              <span className="text-[10px] font-extrabold text-pastel-blueDeep sm:text-[11px]">❓ {quizScore}</span>
+            ) : quizCount > 0 ? (
+              <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">❓ {quizCount}/{TOTAL_LESSONS}</span>
+            ) : null}
           </div>
         </div>
       </button>
@@ -583,12 +614,12 @@ function StudentTile({
           student.submitted
             ? "bg-slate-200 text-slate-500"
             : canSubmit
-              ? "bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep text-white"
-              : "bg-slate-100 text-slate-400",
+              ? "bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep text-white shadow-soft"
+              : "bg-white/80 text-slate-400 ring-1 ring-slate-200",
           "disabled:active:scale-100"
         )}
       >
-        {student.submitted ? "제출됨" : submitting ? "제출 중..." : "최종 제출"}
+        {student.submitted ? "✓ 제출됨" : submitting ? "제출 중..." : "최종 제출"}
       </button>
     </li>
   );
@@ -643,33 +674,36 @@ function StudentLessonModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md animate-slide-up flex-col rounded-t-3xl bg-white shadow-soft">
+      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-3xl bg-white shadow-soft">
         {/* 시트 핸들 */}
         <div className="flex shrink-0 justify-center pb-1 pt-3">
           <span className="h-1.5 w-12 rounded-full bg-slate-200" />
         </div>
 
         {/* 학생 프로필 + 이름 */}
-        <header className="flex shrink-0 items-center gap-3 px-5 pb-4 pt-2">
-          <div className={cn(
-            "relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-[4px] transition-colors",
-            done ? "border-pastel-greenDeep" : "border-pastel-yellowDeep"
-          )}>
-            <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
-            {done && (
-              <span key={JSON.stringify(states)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/30">
-                <Check className="h-6 w-6 text-white drop-shadow" strokeWidth={3} />
-              </span>
-            )}
+        <header className="flex shrink-0 items-center gap-3 bg-gradient-to-b from-pastel-green/40 to-transparent px-5 pb-4 pt-3">
+          <div className="relative shrink-0">
+            <div aria-hidden className="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-pastel-greenDeep to-emerald-300 opacity-70 blur-[2px]" />
+            <div className={cn(
+              "relative h-14 w-14 overflow-hidden rounded-full border-[4px] bg-white transition-colors",
+              done ? "border-pastel-greenDeep" : "border-white"
+            )}>
+              <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
+              {done && (
+                <span key={JSON.stringify(states)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/30">
+                  <Check className="h-6 w-6 text-white drop-shadow" strokeWidth={3} />
+                </span>
+              )}
+            </div>
           </div>
           <div className="min-w-0">
             <p
               id="lesson-modal-title"
               className="truncate text-xl font-extrabold text-slate-800"
             >
-              {student.name}
+              <span className="mr-1">📖</span>{student.name}
             </p>
-            <p className="text-sm text-slate-500">탭할 때마다 <b>성공 → 실패 → 미정</b> 순으로 바뀌어요</p>
+            <p className="text-xs text-slate-500">탭할 때마다 <b>성공 → 실패 → 미정</b> 순</p>
           </div>
         </header>
 
@@ -721,7 +755,7 @@ function StudentLessonModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-14 flex-1 rounded-2xl bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+            className="h-14 flex-1 rounded-2xl bg-gradient-to-br from-pastel-greenDeep to-emerald-500 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
           >
             확인
           </button>
@@ -776,33 +810,36 @@ function StudentQuizModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md animate-slide-up flex-col rounded-t-3xl bg-white shadow-soft">
+      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-3xl bg-white shadow-soft">
         {/* 시트 핸들 */}
         <div className="flex shrink-0 justify-center pb-1 pt-3">
           <span className="h-1.5 w-12 rounded-full bg-slate-200" />
         </div>
 
         {/* 학생 프로필 + 이름 */}
-        <header className="flex shrink-0 items-center gap-3 px-5 pb-4 pt-2">
-          <div className={cn(
-            "relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-[4px] transition-colors",
-            done ? "border-pastel-blueDeep" : "border-pastel-yellowDeep"
-          )}>
-            <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
-            {done && (
-              <span key={JSON.stringify(states)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-blueDeep/30">
-                <Check className="h-6 w-6 text-white drop-shadow" strokeWidth={3} />
-              </span>
-            )}
+        <header className="flex shrink-0 items-center gap-3 bg-gradient-to-b from-pastel-blue/40 to-transparent px-5 pb-4 pt-3">
+          <div className="relative shrink-0">
+            <div aria-hidden className="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-pastel-blueDeep to-sky-300 opacity-70 blur-[2px]" />
+            <div className={cn(
+              "relative h-14 w-14 overflow-hidden rounded-full border-[4px] bg-white transition-colors",
+              done ? "border-pastel-blueDeep" : "border-white"
+            )}>
+              <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
+              {done && (
+                <span key={JSON.stringify(states)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-blueDeep/30">
+                  <Check className="h-6 w-6 text-white drop-shadow" strokeWidth={3} />
+                </span>
+              )}
+            </div>
           </div>
           <div className="min-w-0">
             <p
               id="quiz-modal-title"
               className="truncate text-xl font-extrabold text-slate-800"
             >
-              {student.name}
+              <span className="mr-1">❓</span>{student.name}
             </p>
-            <p className="text-sm text-slate-500">탭할 때마다 <b>정답 → 오답 → 미정</b> 순으로 바뀌어요</p>
+            <p className="text-xs text-slate-500">탭할 때마다 <b>정답 → 오답 → 미정</b> 순</p>
           </div>
         </header>
 
@@ -853,7 +890,7 @@ function StudentQuizModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-14 flex-1 rounded-2xl bg-gradient-to-br from-pastel-yellowDeep to-pastel-blueDeep text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+            className="h-14 flex-1 rounded-2xl bg-gradient-to-br from-pastel-blueDeep to-sky-500 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
           >
             확인
           </button>
@@ -896,6 +933,7 @@ function StudentActionSheet({
   }, [onClose]);
 
   const done = student.success;
+  const quizDone = student.quizSuccess;
 
   return (
     <div
@@ -907,46 +945,57 @@ function StudentActionSheet({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto flex w-full max-w-md animate-slide-up flex-col rounded-t-3xl bg-white shadow-soft">
+      <div className="mx-auto flex w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-3xl bg-white shadow-soft">
         {/* 시트 핸들 */}
         <div className="flex shrink-0 justify-center pb-1 pt-3">
           <span className="h-1.5 w-12 rounded-full bg-slate-200" />
         </div>
 
-        {/* 학생 프로필 */}
-        <header className="flex flex-col items-center gap-2 px-5 pb-4 pt-2">
-          <div className={cn(
-            "relative h-20 w-20 overflow-hidden rounded-full border-[4px] bg-white shadow-soft transition-colors",
-            done ? "border-pastel-greenDeep" : "border-pastel-yellowDeep"
-          )}>
-            <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
-            {done && (
-              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-pastel-greenDeep/30">
-                <Check className="h-7 w-7 text-white drop-shadow" strokeWidth={3} />
-              </span>
-            )}
+        {/* 학생 프로필 — 부드러운 파스텔 배경 강조 */}
+        <header className="relative flex flex-col items-center gap-2 bg-gradient-to-b from-pastel-yellow/40 to-transparent px-5 pb-5 pt-3">
+          <div className="relative">
+            <div aria-hidden className="absolute -inset-1 rounded-full bg-gradient-to-tr from-pastel-greenDeep via-pastel-yellowDeep to-pastel-blueDeep opacity-60 blur-[2px]" />
+            <div className={cn(
+              "relative h-20 w-20 overflow-hidden rounded-full border-[4px] bg-white shadow-soft transition-colors",
+              done ? "border-pastel-greenDeep" : "border-white"
+            )}>
+              <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
+              {done && (
+                <span className="absolute inset-0 flex items-center justify-center rounded-full bg-pastel-greenDeep/30">
+                  <Check className="h-7 w-7 text-white drop-shadow" strokeWidth={3} />
+                </span>
+              )}
+            </div>
           </div>
           <p className="text-xl font-extrabold text-slate-800">{student.name}</p>
-          <p className="text-sm text-slate-500">활동을 선택하세요</p>
+          <p className="text-sm text-slate-500">어떤 활동을 표시할까요?</p>
         </header>
 
         {/* 암송 / 퀴즈 버튼 */}
-        <div className="flex gap-3 px-5 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-2">
+        <div className="flex gap-3 px-5 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-3">
           <button
             type="button"
             onClick={onRecitation}
-            className="flex h-24 flex-1 flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep text-white shadow-soft transition active:scale-[0.97]"
+            className="relative flex h-28 flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden rounded-3xl bg-gradient-to-br from-pastel-greenDeep to-emerald-500 text-white shadow-soft transition active:scale-[0.97]"
           >
+            {done && (
+              <Sparkles aria-hidden className="absolute right-2 top-2 h-4 w-4 text-white/80" />
+            )}
             <span className="text-3xl">📖</span>
             <span className="text-lg font-extrabold">암송</span>
+            <span className="text-[10px] font-bold text-white/85">말씀 외우기</span>
           </button>
           <button
             type="button"
             onClick={onQuiz}
-            className="flex h-24 flex-1 flex-col items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-pastel-yellowDeep to-pastel-pink text-white shadow-soft transition active:scale-[0.97]"
+            className="relative flex h-28 flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden rounded-3xl bg-gradient-to-br from-pastel-blueDeep to-sky-500 text-white shadow-soft transition active:scale-[0.97]"
           >
+            {quizDone && (
+              <Sparkles aria-hidden className="absolute right-2 top-2 h-4 w-4 text-white/80" />
+            )}
             <span className="text-3xl">❓</span>
             <span className="text-lg font-extrabold">퀴즈</span>
+            <span className="text-[10px] font-bold text-white/85">문제 풀기</span>
           </button>
         </div>
       </div>
@@ -1014,13 +1063,20 @@ function ProgressBar({
   color: "green" | "blue";
 }) {
   const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  const isFull = total > 0 && done === total;
   // 색상 클래스를 두 가지만 분기 — 디자인 톤 통일
-  const fill = color === "green" ? "bg-pastel-greenDeep" : "bg-pastel-blueDeep";
+  const fill =
+    color === "green"
+      ? "bg-gradient-to-r from-pastel-greenDeep to-emerald-400"
+      : "bg-gradient-to-r from-pastel-blueDeep to-sky-400";
   const tint = color === "green" ? "text-pastel-greenDeep" : "text-pastel-blueDeep";
   const bg = color === "green" ? "bg-pastel-green/40" : "bg-pastel-blue/40";
 
   return (
-    <div className={cn("flex flex-col gap-1 rounded-xl px-3 py-1.5", bg)}>
+    <div className={cn("relative flex flex-col gap-1 overflow-hidden rounded-2xl px-3 py-2", bg)}>
+      {isFull && (
+        <Sparkles aria-hidden className={cn("absolute right-1.5 top-1.5 h-3.5 w-3.5", tint)} />
+      )}
       <div className="flex items-center justify-between">
         <span className={cn("flex items-center gap-1 text-xs font-extrabold", tint)}>
           {icon}
@@ -1030,9 +1086,9 @@ function ProgressBar({
           {done}<span className="text-slate-400">/{total}</span>
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/70">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-white/80 ring-1 ring-white/60">
         <div
-          className={cn("h-full rounded-full transition-all", fill)}
+          className={cn("h-full rounded-full transition-all duration-500", fill)}
           style={{ width: `${pct}%` }}
         />
       </div>
