@@ -132,6 +132,18 @@ public class RecitationService {
                 .orElseThrow();
     }
 
+    @Transactional
+    public StudentRecitationDto unlockStudentSubmission(Long studentId, LocalDate date) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
+        recordRepository.markUnsubmittedByStudentAndDate(studentId, date);
+        return getClassStatus(student.getClassEntity().getId(), date)
+                .stream()
+                .filter(dto -> dto.studentId().equals(studentId))
+                .findFirst()
+                .orElseThrow();
+    }
+
     @Transactional(readOnly = true)
     public List<StudentRecitationDto> getAllScores(LocalDate date) {
         List<ClassDto> classes = listClasses();

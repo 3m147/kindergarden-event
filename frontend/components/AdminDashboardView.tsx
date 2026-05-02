@@ -26,6 +26,14 @@ export default function AdminDashboardView() {
   const [expandedClass, setExpandedClass] = React.useState<number | null>(null);
   const [expandedStudent, setExpandedStudent] = React.useState<number | null>(null);
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
+  const [unlockingStudentId, setUnlockingStudentId] = React.useState<number | null>(null);
+  const [toast, setToast] = React.useState<{ kind: "success" | "error"; text: string } | null>(null);
+
+  React.useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   React.useEffect(() => {
     const auth = localStorage.getItem("admin_authenticated");
@@ -44,6 +52,21 @@ export default function AdminDashboardView() {
   const handleLogout = () => {
     localStorage.removeItem("admin_authenticated");
     router.replace("/admin");
+  };
+
+  const handleUnlock = async (student: StudentRecitationDto) => {
+    if (unlockingStudentId !== null) return;
+    setUnlockingStudentId(student.studentId);
+    try {
+      const updated = await api.unlockStudentSubmission(student.studentId);
+      setStudents((prev) => prev.map((s) => (s.studentId === student.studentId ? updated : s)));
+      setExpandedStudent(null);
+      setToast({ kind: "success", text: `${updated.name} 수정 잠금을 해제했습니다.` });
+    } catch (e) {
+      setToast({ kind: "error", text: "수정 잠금 해제 중 오류가 발생했습니다." });
+    } finally {
+      setUnlockingStudentId(null);
+    }
   };
 
   if (!authenticated) return null;
@@ -224,6 +247,14 @@ export default function AdminDashboardView() {
                                       );
                                     })}
                                   </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUnlock(student)}
+                                    disabled={unlockingStudentId === student.studentId}
+                                    className="mt-3 h-10 w-full rounded-xl bg-amber-500/15 text-sm font-extrabold text-amber-300 ring-1 ring-amber-500/30 transition hover:bg-amber-500/25 active:scale-[0.99] disabled:opacity-60"
+                                  >
+                                    {unlockingStudentId === student.studentId ? "해제 중..." : "수정 허용"}
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -237,6 +268,19 @@ export default function AdminDashboardView() {
           })}
         </div>
       </section>
+      {toast && (
+        <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-5">
+          <div
+            className={cn(
+              "rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-lg",
+              toast.kind === "success" ? "bg-emerald-600" : "bg-red-500"
+            )}
+            role="status"
+          >
+            {toast.text}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

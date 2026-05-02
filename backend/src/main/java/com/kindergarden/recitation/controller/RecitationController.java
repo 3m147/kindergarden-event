@@ -66,6 +66,15 @@ public class RecitationController {
         return service.submitStudent(studentId, date != null ? date : LocalDate.now());
     }
 
+    // 관리자: 학생 1명의 오늘 최종 제출 잠금 해제
+    @PostMapping("/admin/students/{studentId}/unlock")
+    public StudentRecitationDto unlockStudentSubmission(
+            @PathVariable Long studentId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return service.unlockStudentSubmission(studentId, date != null ? date : LocalDate.now());
+    }
+
     // 관리자 대시보드 - 전체 반의 현황 조회
     @GetMapping("/admin/scores")
     public List<StudentRecitationDto> getAdminScores(

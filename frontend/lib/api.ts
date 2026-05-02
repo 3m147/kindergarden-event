@@ -107,6 +107,12 @@ export const api = {
       { method: "POST" }
     ),
 
+  unlockStudentSubmission: (studentId: number, date?: string) =>
+    request<StudentRecitationDto>(
+      `/api/admin/students/${studentId}/unlock${date ? `?date=${date}` : ""}`,
+      { method: "POST" }
+    ),
+
   getAdminScores: (date?: string) =>
     request<StudentRecitationDto[]>(
       `/api/admin/scores${date ? `?date=${date}` : ""}`
