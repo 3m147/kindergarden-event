@@ -30,7 +30,8 @@ import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, HelpCircle, Re
 import { cn } from "@/lib/cn";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
-const TOTAL_LESSONS = 16;
+const TOTAL_RECITATIONS = 16;
+const TOTAL_QUIZZES = 18;
 type ToggleState = "success" | "fail" | undefined;
 
 function nextToggleState(current: ToggleState): ToggleState {
@@ -97,8 +98,8 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
         const qCount = Object.keys(s.quizStates || {}).length;
         return {
           ...s,
-          success: lCount === TOTAL_LESSONS,
-          quizSuccess: qCount === TOTAL_LESSONS
+          success: lCount === TOTAL_RECITATIONS,
+          quizSuccess: qCount === TOTAL_QUIZZES
         };
       });
       setStudents(mapped);
@@ -137,10 +138,10 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
     students.find((s) => s.studentId === submitConfirmStudentId) ?? null;
 
   // 모든 과(1~16)에 대해 success/fail 표시가 끝난 학생 수 — 진행률 표시용
-  const isAllChecked = (states?: Record<number, "success" | "fail">) =>
-    !!states && Object.keys(states).length === TOTAL_LESSONS;
-  const recitationDone = students.filter((s) => isAllChecked(s.lessonStates)).length;
-  const quizDone = students.filter((s) => isAllChecked(s.quizStates)).length;
+  const isAllChecked = (states: Record<number, "success" | "fail"> | undefined, total: number) =>
+    !!states && Object.keys(states).length === total;
+  const recitationDone = students.filter((s) => isAllChecked(s.lessonStates, TOTAL_RECITATIONS)).length;
+  const quizDone = students.filter((s) => isAllChecked(s.quizStates, TOTAL_QUIZZES)).length;
   const totalCount = students.length;
 
   // 학생 프로필 탭: 상단 프로필 동기화 + 액션 시트 오픈
@@ -204,7 +205,7 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
         if (nextState) newStates[quizNum] = nextState;
         else delete newStates[quizNum];
 
-        const nextQuizSuccess = Array.from({ length: TOTAL_LESSONS }, (_, i) => i + 1)
+        const nextQuizSuccess = Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1)
           .every((n) => newStates[n] !== undefined);
 
         return { ...s, quizStates: newStates, quizSuccess: nextQuizSuccess };
@@ -239,7 +240,7 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
         else delete newStates[lessonNum];
 
         // 팝업창 안의 모든 버튼(1~16과)이 누락(흰색) 없이 모두 초록색 또는 빨간색으로 토글되면 완료 이벤트(success) 발동
-        const nextSuccess = Array.from({ length: TOTAL_LESSONS }, (_, i) => i + 1)
+        const nextSuccess = Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1)
           .every((n) => newStates[n] !== undefined);
 
         return { ...s, lessonStates: newStates, success: nextSuccess };
@@ -278,8 +279,8 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
       setStudents((prev) => prev.map((s) => (s.studentId === studentId ? {
         ...s,
         ...updated,
-        success: isAllChecked(updated.lessonStates),
-        quizSuccess: isAllChecked(updated.quizStates)
+        success: isAllChecked(updated.lessonStates, TOTAL_RECITATIONS),
+        quizSuccess: isAllChecked(updated.quizStates, TOTAL_QUIZZES)
       } : s)));
       setToast({ kind: "success", text: `${updated.name} 최종 제출 완료! 관리자 화면에 반영돼요.` });
     } catch (e) {
@@ -615,12 +616,12 @@ function StudentTile({
             {done ? (
               <span className="text-[10px] font-extrabold text-pastel-greenDeep sm:text-[11px]">📖 {score}</span>
             ) : recitationCount > 0 ? (
-              <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">📖 {recitationCount}/{TOTAL_LESSONS}</span>
+              <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">📖 {recitationCount}/{TOTAL_RECITATIONS}</span>
             ) : null}
             {quizDone ? (
               <span className="text-[10px] font-extrabold text-pastel-blueDeep sm:text-[11px]">❓ {quizScore}</span>
             ) : quizCount > 0 ? (
-              <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">❓ {quizCount}/{TOTAL_LESSONS}</span>
+              <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">❓ {quizCount}/{TOTAL_QUIZZES}</span>
             ) : null}
           </div>
         </div>
@@ -733,7 +734,7 @@ function StudentLessonModal({
         {/* 과 버튼 그리드 (1~16, 4열) — 필요 시 내부 스크롤 */}
         <div className="flex-1 overflow-y-auto px-5 pb-4">
           <div className="grid grid-cols-4 gap-2">
-            {Array.from({ length: TOTAL_LESSONS }, (_, i) => i + 1).map((n) => {
+            {Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1).map((n) => {
               const state = states[n];
               return (
                 <button
@@ -786,7 +787,7 @@ function StudentLessonModal({
 }
 
 /**
- * 학생별 퀴즈(1~16) 선택 팝업 — 암송 모달과 동일한 구조, 다른 색상 테마.
+ * 학생별 퀴즈(1~18) 선택 팝업 — 암송 모달과 동일한 구조, 다른 색상 테마.
  */
 function StudentQuizModal({
   student,
@@ -865,10 +866,10 @@ function StudentQuizModal({
 
         <ColorLegend successLabel="정답" successColor="blue" />
 
-        {/* 퀴즈 버튼 그리드 (1~16, 4열) */}
+        {/* 퀴즈 버튼 그리드 (1~18, 4열) */}
         <div className="flex-1 overflow-y-auto px-5 pb-4">
           <div className="grid grid-cols-4 gap-2">
-            {Array.from({ length: TOTAL_LESSONS }, (_, i) => i + 1).map((n) => {
+            {Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1).map((n) => {
               const state = states[n];
               return (
                 <button

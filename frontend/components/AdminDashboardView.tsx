@@ -13,7 +13,8 @@ import { cn } from "@/lib/cn";
 import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, XCircle, ArrowLeft, Camera, RefreshCw } from "lucide-react";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
-const TOTAL_LESSONS = 16;
+const TOTAL_RECITATIONS = 16;
+const TOTAL_QUIZZES = 18;
 
 function countSuccess(states: Record<number, "success" | "fail"> | undefined): number {
   if (!states) return 0;
@@ -191,8 +192,8 @@ export default function AdminDashboardView() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="hidden text-right sm:block">
-                      <p className="text-xs text-slate-400">평균 암송 <span className="font-bold text-emerald-400">{avgRecitation}</span>/{TOTAL_LESSONS}</p>
-                      <p className="text-xs text-slate-400">평균 퀴즈 <span className="font-bold text-sky-400">{avgQuiz}</span>/{TOTAL_LESSONS}</p>
+                      <p className="text-xs text-slate-400">평균 암송 <span className="font-bold text-emerald-400">{avgRecitation}</span>/{TOTAL_RECITATIONS}</p>
+                      <p className="text-xs text-slate-400">평균 퀴즈 <span className="font-bold text-sky-400">{avgQuiz}</span>/{TOTAL_QUIZZES}</p>
                     </div>
                     {group.students.length > 0 && (
                       <span className="rounded-lg bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-400">제출됨</span>
@@ -230,12 +231,12 @@ export default function AdminDashboardView() {
                                   <span className="flex items-center gap-1 text-xs font-bold">
                                     <BookOpen className="h-3.5 w-3.5 text-emerald-400" />
                                     <span className="text-emerald-400">{recitationScore}</span>
-                                    <span className="text-slate-500">/{TOTAL_LESSONS}</span>
+                                    <span className="text-slate-500">/{TOTAL_RECITATIONS}</span>
                                   </span>
                                   <span className="flex items-center gap-1 text-xs font-bold">
                                     <HelpCircle className="h-3.5 w-3.5 text-sky-400" />
                                     <span className="text-sky-400">{quizScore}</span>
-                                    <span className="text-slate-500">/{TOTAL_LESSONS}</span>
+                                    <span className="text-slate-500">/{TOTAL_QUIZZES}</span>
                                   </span>
                                   {isStudentExpanded ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
                                 </div>
@@ -244,9 +245,9 @@ export default function AdminDashboardView() {
                               {/* 상세 과별 현황 */}
                               {isStudentExpanded && (
                                 <div className="border-t border-slate-700/50 px-3 pb-3 pt-2">
-                                  <p className="mb-2 text-xs font-bold text-emerald-400">📖 암송 (성공 {recitationScore}/{TOTAL_LESSONS})</p>
+                                  <p className="mb-2 text-xs font-bold text-emerald-400">📖 암송 (성공 {recitationScore}/{TOTAL_RECITATIONS})</p>
                                   <div className="mb-3 grid grid-cols-8 gap-1">
-                                    {Array.from({ length: TOTAL_LESSONS }, (_, i) => i + 1).map((n) => {
+                                    {Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1).map((n) => {
                                       const st = student.lessonStates[n];
                                       return (
                                         <div key={n} className={cn(
@@ -258,9 +259,9 @@ export default function AdminDashboardView() {
                                       );
                                     })}
                                   </div>
-                                  <p className="mb-2 text-xs font-bold text-sky-400">❓ 퀴즈 (정답 {quizScore}/{TOTAL_LESSONS})</p>
+                                  <p className="mb-2 text-xs font-bold text-sky-400">❓ 퀴즈 (정답 {quizScore}/{TOTAL_QUIZZES})</p>
                                   <div className="grid grid-cols-8 gap-1">
-                                    {Array.from({ length: TOTAL_LESSONS }, (_, i) => i + 1).map((n) => {
+                                    {Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1).map((n) => {
                                       const st = student.quizStates[n];
                                       return (
                                         <div key={n} className={cn(
