@@ -26,7 +26,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, HelpCircle, Sparkles, Sun } from "lucide-react";
+import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, HelpCircle, RefreshCw, Sparkles, Sun } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
@@ -74,6 +74,7 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
   const [quizModalStudentId, setQuizModalStudentId] = React.useState<number | null>(null);
   const [actionStudentId, setActionStudentId] = React.useState<number | null>(null);
   const [submittingStudentId, setSubmittingStudentId] = React.useState<number | null>(null);
+  const [refreshing, setRefreshing] = React.useState(false);
   // 브라우저 기본 confirm/alert 대신 부드러운 모달/토스트로 대체
   const [submitConfirmStudentId, setSubmitConfirmStudentId] = React.useState<number | null>(null);
   const [toast, setToast] = React.useState<{ kind: "success" | "error"; text: string } | null>(null);
@@ -85,35 +86,44 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
     return () => clearTimeout(t);
   }, [toast]);
 
+  const loadStudents = React.useCallback(async (showToast = false) => {
+    if (!teacherInfo) return;
+    setRefreshing(true);
+    try {
+      const data = await api.getClassRecitations(selectedClassId);
+      // 클라이언트에서 추가적인 success/quizSuccess 필드를 계산해준다
+      const mapped = data.map(s => {
+        const lCount = Object.keys(s.lessonStates || {}).length;
+        const qCount = Object.keys(s.quizStates || {}).length;
+        return {
+          ...s,
+          success: lCount === TOTAL_LESSONS,
+          quizSuccess: qCount === TOTAL_LESSONS
+        };
+      });
+      setStudents(mapped);
+      if (showToast) {
+        setToast({ kind: "success", text: "최신 상태로 새로고침했어요." });
+      }
+    } catch (e) {
+      console.error("학생 정보 로드 실패", e);
+      if (showToast) {
+        setToast({ kind: "error", text: "새로고침 중 오류가 발생했어요." });
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedClassId, teacherInfo]);
+
   // 선택된 반 학생 + 오늘 상태 로드
   React.useEffect(() => {
     if (!teacherInfo) return;
-    
-    const loadStudents = async () => {
-      try {
-        const data = await api.getClassRecitations(selectedClassId);
-        // 클라이언트에서 추가적인 success/quizSuccess 필드를 계산해준다
-        const mapped = data.map(s => {
-          const lCount = Object.keys(s.lessonStates || {}).length;
-          const qCount = Object.keys(s.quizStates || {}).length;
-          return {
-            ...s,
-            success: lCount === TOTAL_LESSONS,
-            quizSuccess: qCount === TOTAL_LESSONS
-          };
-        });
-        setStudents(mapped);
-      } catch (e) {
-        console.error("학생 정보 로드 실패", e);
-      }
-    };
-    
     loadStudents();
     setActiveStudentId(null);
     setModalStudentId(null);
     setQuizModalStudentId(null);
     setActionStudentId(null);
-  }, [selectedClassId, teacherInfo]);
+  }, [loadStudents, selectedClassId, teacherInfo]);
 
   const activeStudent =
     students.find((s) => s.studentId === activeStudentId) ?? students[0] ?? null;
@@ -309,6 +319,16 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
               <span className="font-bold text-pastel-blueDeep"> 퀴즈</span>를 표시하세요
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => loadStudents(true)}
+            disabled={refreshing}
+            className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-white active:scale-95 disabled:opacity-60"
+            aria-label="학생 목록 새로고침"
+            title="새로고침"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+          </button>
           <button
             type="button"
             onClick={handleBackToLogin}

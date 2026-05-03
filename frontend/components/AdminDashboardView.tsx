@@ -10,7 +10,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, XCircle, ArrowLeft, Camera } from "lucide-react";
+import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, XCircle, ArrowLeft, Camera, RefreshCw } from "lucide-react";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
 const TOTAL_LESSONS = 16;
@@ -26,6 +26,7 @@ export default function AdminDashboardView() {
   const [expandedClass, setExpandedClass] = React.useState<number | null>(null);
   const [expandedStudent, setExpandedStudent] = React.useState<number | null>(null);
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [unlockingStudentId, setUnlockingStudentId] = React.useState<number | null>(null);
   const [toast, setToast] = React.useState<{ kind: "success" | "error"; text: string } | null>(null);
 
@@ -35,6 +36,24 @@ export default function AdminDashboardView() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  const loadScores = React.useCallback(async (showToast = false) => {
+    setRefreshing(true);
+    try {
+      const data = await api.getAdminScores();
+      setStudents(data);
+      if (showToast) {
+        setToast({ kind: "success", text: "최신 현황으로 새로고침했습니다." });
+      }
+    } catch (e) {
+      console.error("점수 로드 실패", e);
+      if (showToast) {
+        setToast({ kind: "error", text: "새로고침 중 오류가 발생했습니다." });
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   React.useEffect(() => {
     const auth = localStorage.getItem("admin_authenticated");
     if (auth !== "true") {
@@ -42,12 +61,8 @@ export default function AdminDashboardView() {
       return;
     }
     setAuthenticated(true);
-    
-    // Load actual scores
-    api.getAdminScores()
-      .then(setStudents)
-      .catch(e => console.error("점수 로드 실패", e));
-  }, [router]);
+    loadScores();
+  }, [loadScores, router]);
 
   const handleLogout = () => {
     localStorage.removeItem("admin_authenticated");
@@ -100,6 +115,16 @@ export default function AdminDashboardView() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => loadScores(true)}
+              disabled={refreshing}
+              className="flex h-10 items-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-400 ring-1 ring-slate-700 transition hover:text-white active:scale-95 disabled:opacity-60"
+              title="새로고침"
+            >
+              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+              새로고침
+            </button>
             <button
               type="button"
               onClick={() => router.push("/admin/profiles")}
