@@ -49,10 +49,13 @@ function todayLabel() {
 
 type TeacherCheckViewProps = {
   initialClassId?: number;
+  mode?: "festival" | "kindergarten";
 };
 
-export default function TeacherCheckView({ initialClassId }: TeacherCheckViewProps = {}) {
+export default function TeacherCheckView({ initialClassId, mode = "festival" }: TeacherCheckViewProps = {}) {
   const router = useRouter();
+  const screenTitle = mode === "kindergarten" ? "유치부 체크" : "암송잔치";
+  const screenSubtitle = mode === "kindergarten" ? "오늘 반별 체크" : "행사 암송 체크";
   
   // 교사 정보 로드
   const [teacherInfo, setTeacherInfo] = React.useState<any>(null);
@@ -313,10 +316,10 @@ export default function TeacherCheckView({ initialClassId }: TeacherCheckViewPro
               {todayLabel()} · {className}
             </p>
             <h1 className="mt-2 text-xl font-extrabold text-slate-800 sm:text-2xl">
-              오늘의 암송 체크 <span className="ml-0.5">📖</span>
+              {screenTitle} <span className="ml-0.5">📖</span>
             </h1>
             <p className="mt-1 text-xs text-slate-500">
-              학생을 눌러 <span className="font-bold text-pastel-greenDeep">암송</span> ·
+              <span className="font-bold text-pastel-yellowDeep">{screenSubtitle}</span> · 학생을 눌러 <span className="font-bold text-pastel-greenDeep">암송</span> ·
               <span className="font-bold text-pastel-blueDeep"> 퀴즈</span>를 표시하세요
             </p>
           </div>

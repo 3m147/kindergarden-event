@@ -13,7 +13,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { Eye, EyeOff, LogIn, Sparkles } from "lucide-react";
+import { ClipboardCheck, Eye, EyeOff, LogIn, Sparkles, Trophy } from "lucide-react";
 import { api, resolveMediaUrl } from "@/lib/api";
 
 function todayLabel() {
@@ -70,21 +70,22 @@ export default function StartView() {
       
       // 교사 정보 저장 (TeacherCheckView 등에서 사용)
       localStorage.setItem("teacher_info", JSON.stringify(account));
-      
-      setTimeout(() => {
-        router.push(`/check/${account.classId}`);
-      }, 1200);
     } catch (err: any) {
       setError(err.message || "아이디 또는 비밀번호가 올바르지 않습니다.");
       setLoading(false);
     }
   };
 
-  // 로그인 성공 환영 화면
+  const openTeacherMode = (mode: "festival" | "kindergarten") => {
+    if (!loggedIn) return;
+    router.push(`/check/${loggedIn.classId}?mode=${mode}`);
+  };
+
+  // 로그인 성공 후 선생님이 사용할 화면 선택
   if (loggedIn) {
     return (
       <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center justify-center bg-pastel-cream px-6">
-        <div className="flex animate-fade-in flex-col items-center gap-4">
+        <div className="flex w-full animate-fade-in flex-col items-center gap-5">
           {/* 환영 아바타 */}
           <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-pastel-greenDeep bg-white shadow-soft">
             <img
@@ -103,18 +104,36 @@ export default function StartView() {
             </p>
             <p className="mt-2 text-sm text-slate-500">
               <span className="font-bold text-pastel-yellowDeep">{loggedIn.className}</span>
-              으로 이동 중...
+              에서 사용할 화면을 선택해 주세요.
             </p>
           </div>
-          {/* 로딩 인디케이터 */}
-          <div className="mt-4 flex gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="h-2.5 w-2.5 animate-bounce rounded-full bg-pastel-greenDeep"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              />
-            ))}
+          <div className="grid w-full gap-3">
+            <button
+              type="button"
+              onClick={() => openTeacherMode("festival")}
+              className="flex min-h-20 items-center gap-4 rounded-3xl bg-gradient-to-br from-pastel-yellow to-pastel-pink px-5 py-4 text-left shadow-soft transition active:scale-[0.98]"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/80 text-pastel-yellowDeep shadow-sm">
+                <Trophy className="h-7 w-7" />
+              </span>
+              <span>
+                <span className="block text-lg font-extrabold text-slate-800">암송잔치</span>
+                <span className="mt-0.5 block text-xs font-bold text-slate-500">행사 암송 · 퀴즈 체크</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openTeacherMode("kindergarten")}
+              className="flex min-h-20 items-center gap-4 rounded-3xl bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep px-5 py-4 text-left text-white shadow-soft transition active:scale-[0.98]"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 shadow-sm">
+                <ClipboardCheck className="h-7 w-7" />
+              </span>
+              <span>
+                <span className="block text-lg font-extrabold">유치부체크</span>
+                <span className="mt-0.5 block text-xs font-bold text-white/80">오늘 반별 체크 화면</span>
+              </span>
+            </button>
           </div>
         </div>
       </main>
