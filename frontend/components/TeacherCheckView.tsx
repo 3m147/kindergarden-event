@@ -26,13 +26,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, HelpCircle, RefreshCw, Sparkles, Sun } from "lucide-react";
+import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, HelpCircle, RefreshCw, Sparkles, Sun, Crown, Save } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
 const TOTAL_RECITATIONS = 16;
 const TOTAL_QUIZZES = 18;
-const TOTAL_KINDERGARTEN_LESSONS = 52;
+const TOTAL_KINDERGARTEN_LESSONS = 12;
+const TOTAL_KINDERGARTEN_ACTIVITIES = 36;
 type ToggleState = "success" | "fail" | undefined;
 
 function nextToggleState(current: ToggleState): ToggleState {
@@ -101,12 +102,12 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
       const mapped = data.map(s => {
         const lCount = Object.keys(s.lessonStates || {}).length;
         const qCount = Object.keys(s.quizStates || {}).length;
-        const kCount = Object.keys(s.kindergartenStates || {}).length;
+        const kCount = Object.keys(s.kindergartenActivityStates || {}).length;
         return {
           ...s,
           success: lCount === TOTAL_RECITATIONS,
           quizSuccess: qCount === TOTAL_QUIZZES,
-          kindergartenSuccess: kCount === TOTAL_KINDERGARTEN_LESSONS
+          kindergartenSuccess: kCount === TOTAL_KINDERGARTEN_ACTIVITIES
         };
       });
       setStudents(mapped);
@@ -152,7 +153,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     !!states && Object.keys(states).length === total;
   const recitationDone = students.filter((s) => isAllChecked(s.lessonStates, TOTAL_RECITATIONS)).length;
   const quizDone = students.filter((s) => isAllChecked(s.quizStates, TOTAL_QUIZZES)).length;
-  const kindergartenDone = students.filter((s) => isAllChecked(s.kindergartenStates, TOTAL_KINDERGARTEN_LESSONS)).length;
+  const kindergartenDone = students.filter((s) => Object.keys(s.kindergartenActivityStates ?? {}).length === TOTAL_KINDERGARTEN_ACTIVITIES).length;
   const totalCount = students.length;
 
   // 학생 프로필 탭: 상단 프로필 동기화 + 액션 시트 오픈
@@ -279,23 +280,24 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     }
   };
 
-  const handleToggleKindergartenLesson = async (lessonNum: number) => {
+  const handleToggleKindergartenActivity = async (lessonNum: number, activityType: string) => {
     if (!kindergartenModalStudent) return;
     const studentId = kindergartenModalStudent.studentId;
-    const nextState = kindergartenModalStudent.kindergartenStates?.[lessonNum] ? undefined : "success";
+    const activityKey = `${lessonNum}:${activityType}`;
+    const nextState = kindergartenModalStudent.kindergartenActivityStates?.[activityKey] ? undefined : "success";
 
     setStudents((prev) =>
       prev.map((s) => {
         if (s.studentId !== studentId) return s;
-        const currentStates = s.kindergartenStates || {};
+        const currentStates = s.kindergartenActivityStates || {};
         const newStates = { ...currentStates };
-        if (nextState) newStates[lessonNum] = nextState;
-        else delete newStates[lessonNum];
+        if (nextState) newStates[activityKey] = nextState;
+        else delete newStates[activityKey];
 
         return {
           ...s,
-          kindergartenStates: newStates,
-          kindergartenSuccess: Object.keys(newStates).length === TOTAL_KINDERGARTEN_LESSONS
+          kindergartenActivityStates: newStates,
+          kindergartenSuccess: Object.keys(newStates).length === TOTAL_KINDERGARTEN_ACTIVITIES
         };
       })
     );
@@ -304,7 +306,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
       await api.toggleRecitation(
         studentId,
         lessonNum,
-        "KINDERGARTEN",
+        activityType,
         nextState === "success" ? true : null,
         teacherInfo?.id || 1
       );
@@ -516,7 +518,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
         <StudentKindergartenModal
           student={kindergartenModalStudent}
           onClose={handleKindergartenModalClose}
-          onToggle={handleToggleKindergartenLesson}
+          onToggle={handleToggleKindergartenActivity}
         />
       )}
 
@@ -647,10 +649,10 @@ function StudentTile({
   const allDone = mode === "kindergarten" ? !!kindergartenDone : done && quizDone;
   const score = Object.values(student.lessonStates ?? {}).filter(s => s === 'success').length;
   const quizScore = Object.values(student.quizStates ?? {}).filter(s => s === 'success').length;
-  const kindergartenScore = Object.values(student.kindergartenStates ?? {}).filter(s => s === 'success').length;
+  const kindergartenScore = Object.values(student.kindergartenActivityStates ?? {}).filter(s => s === 'success').length;
   const recitationCount = Object.keys(student.lessonStates ?? {}).length;
   const quizCount = Object.keys(student.quizStates ?? {}).length;
-  const kindergartenCount = Object.keys(student.kindergartenStates ?? {}).length;
+  const kindergartenCount = Object.keys(student.kindergartenActivityStates ?? {}).length;
 
   return (
     <li className="flex flex-col gap-1.5">
@@ -683,7 +685,7 @@ function StudentTile({
         >
           <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
           {allDone && (
-            <span key={JSON.stringify(student.lessonStates) + JSON.stringify(student.quizStates) + JSON.stringify(student.kindergartenStates)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/40">
+            <span key={JSON.stringify(student.lessonStates) + JSON.stringify(student.quizStates) + JSON.stringify(student.kindergartenActivityStates)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/40">
               <Check className="h-7 w-7 text-white drop-shadow sm:h-8 sm:w-8" strokeWidth={3} />
             </span>
           )}
@@ -695,7 +697,7 @@ function StudentTile({
               kindergartenDone ? (
                 <span className="text-[10px] font-extrabold text-pastel-greenDeep sm:text-[11px]">📚 {kindergartenScore}</span>
               ) : kindergartenCount > 0 ? (
-                <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">📚 {kindergartenCount}/{TOTAL_KINDERGARTEN_LESSONS}</span>
+                <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">📚 {kindergartenCount}/{TOTAL_KINDERGARTEN_ACTIVITIES}</span>
               ) : null
             ) : (
               <>
@@ -869,14 +871,39 @@ function StudentLessonModal({
 }
 
 const KINDERGARTEN_BOOKS = [
-  { id: 1, title: "1권", period: "1~3월", start: 1, end: 13 },
-  { id: 2, title: "2권", period: "4~6월", start: 14, end: 26 },
-  { id: 3, title: "3권", period: "7~9월", start: 27, end: 39 },
-  { id: 4, title: "4권", period: "10~12월", start: 40, end: 52 },
+  { id: 1, title: "1~3과", start: 1, end: 3 },
+  { id: 2, title: "4~6과", start: 4, end: 6 },
+  { id: 3, title: "7~9과", start: 7, end: 9 },
+  { id: 4, title: "10~12과", start: 10, end: 12 },
 ];
 
+const KINDERGARTEN_ACTIVITIES = [
+  { key: "KINDERGARTEN_ATTENDANCE", label: "출석", color: "yellow" },
+  { key: "KINDERGARTEN_FOUNDATION", label: "머릿돌", color: "green" },
+  { key: "KINDERGARTEN_RECITATION", label: "암송", color: "blue" },
+] as const;
+
+const LESSON_TITLES: Record<number, string> = {
+  1: "첫 번째 만남",
+  2: "하나님이 주신 마음",
+  3: "기쁨으로 외워요",
+  4: "말씀을 들어요",
+  5: "친구와 나눠요",
+  6: "작은 약속",
+  7: "감사하는 마음",
+  8: "사랑을 배워요",
+  9: "믿음의 걸음",
+  10: "기도하는 어린이",
+  11: "말씀의 열매",
+  12: "함께 자라요",
+};
+
+function getKindergartenActivityKey(lesson: number, activityType: string) {
+  return `${lesson}:${activityType}`;
+}
+
 /**
- * 유치부 체크 팝업 — 권을 고른 뒤 해당 과를 빠르게 표시한다.
+ * 유치부 체크 팝업 — 바텀시트 안에서 과별 활동 칩을 빠르게 표시한다.
  */
 function StudentKindergartenModal({
   student,
@@ -885,12 +912,20 @@ function StudentKindergartenModal({
 }: {
   student: StudentRecitationDto;
   onClose: () => void;
-  onToggle: (bookNum: number) => void;
+  onToggle: (lessonNum: number, activityType: string) => void;
 }) {
-  const states = student.kindergartenStates ?? {};
-  const done = Object.keys(states).length === TOTAL_KINDERGARTEN_LESSONS;
-  const [selectedBookId, setSelectedBookId] = React.useState<number | null>(null);
-  const selectedBook = KINDERGARTEN_BOOKS.find((book) => book.id === selectedBookId) ?? null;
+  const states = student.kindergartenActivityStates ?? {};
+  const done = Object.keys(states).length === TOTAL_KINDERGARTEN_ACTIVITIES;
+  const [selectedBookId, setSelectedBookId] = React.useState(1);
+  const selectedBook = KINDERGARTEN_BOOKS.find((book) => book.id === selectedBookId) ?? KINDERGARTEN_BOOKS[0];
+  const selectedLessons = Array.from(
+    { length: selectedBook.end - selectedBook.start + 1 },
+    (_, i) => selectedBook.start + i
+  );
+  const attendanceCount = Array.from({ length: TOTAL_KINDERGARTEN_LESSONS }, (_, i) => i + 1)
+    .filter((lesson) => states[getKindergartenActivityKey(lesson, "KINDERGARTEN_ATTENDANCE")] === "success").length;
+  const recitationCount = Array.from({ length: TOTAL_KINDERGARTEN_LESSONS }, (_, i) => i + 1)
+    .filter((lesson) => states[getKindergartenActivityKey(lesson, "KINDERGARTEN_RECITATION")] === "success").length;
 
   React.useEffect(() => {
     const prev = document.body.style.overflow;
@@ -913,162 +948,179 @@ function StudentKindergartenModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="kindergarten-modal-title"
-      className="fixed inset-0 z-40 flex animate-fade-in items-end justify-center bg-slate-900/50 backdrop-blur-sm"
+      className="fixed inset-0 z-40 flex animate-fade-in items-end justify-center overflow-hidden bg-slate-900/55 px-0 backdrop-blur-[3px]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto flex w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-3xl bg-white shadow-soft">
+      <div aria-hidden className="pointer-events-none absolute inset-x-4 top-8 mx-auto max-w-md opacity-60 blur-[1px]">
+        <div className="rounded-[2rem] bg-pastel-cream p-5 shadow-soft">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-extrabold text-slate-800">나의 활동 관리</h2>
+            <Sun className="h-5 w-5 text-pastel-yellowDeep" />
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative">
+              <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-white bg-white shadow-soft">
+                <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
+              </div>
+              <span className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full bg-pastel-yellowDeep text-white shadow-sm">
+                <Crown className="h-4 w-4" />
+              </span>
+            </div>
+            <p className="text-xl font-extrabold text-slate-800">{student.name}</p>
+            <p className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-pastel-greenDeep">{student.className}</p>
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-3xl bg-white/90 p-4 shadow-sm">
+              <p className="text-xs font-bold text-slate-400">이번 달 출석</p>
+              <p className="mt-1 text-lg font-extrabold text-slate-800">{attendanceCount}/15</p>
+            </div>
+            <div className="rounded-3xl bg-white/90 p-4 shadow-sm">
+              <p className="text-xs font-bold text-slate-400">암송 목표</p>
+              <p className="mt-1 text-lg font-extrabold text-slate-800">{recitationCount}/30</p>
+            </div>
+          </div>
+          <div className="mt-5 h-14 rounded-3xl bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep" />
+        </div>
+      </div>
+
+      <div className="relative mx-auto flex h-[76dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-soft">
         <div className="flex shrink-0 justify-center pb-1 pt-3">
           <span className="h-1.5 w-12 rounded-full bg-slate-200" />
         </div>
 
-        <header className="flex shrink-0 items-center gap-3 bg-gradient-to-b from-pastel-green/40 to-transparent px-5 pb-4 pt-3">
-          <div className="relative shrink-0">
-            <div aria-hidden className="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-pastel-greenDeep to-emerald-300 opacity-70 blur-[2px]" />
-            <div className={cn(
-              "relative h-14 w-14 overflow-hidden rounded-full border-[4px] bg-white transition-colors",
-              done ? "border-pastel-greenDeep" : "border-white"
-            )}>
-              <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
+        <header className="shrink-0 bg-gradient-to-b from-pastel-yellow/40 via-pastel-green/20 to-transparent px-5 pb-3 pt-2">
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <div className="h-14 w-14 overflow-hidden rounded-full border-[4px] border-white bg-white shadow-soft">
+                <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
+              </div>
+              <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-pastel-yellowDeep text-white shadow-sm">
+                <Crown className="h-3.5 w-3.5" />
+              </span>
               {done && (
-                <span key={JSON.stringify(states)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/30">
+                <span className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/25">
                   <Check className="h-6 w-6 text-white drop-shadow" strokeWidth={3} />
                 </span>
               )}
             </div>
-          </div>
-          <div className="min-w-0">
-            <p
-              id="kindergarten-modal-title"
-              className="truncate text-xl font-extrabold text-slate-800"
+            <div className="min-w-0 flex-1">
+              <p id="kindergarten-modal-title" className="truncate text-xl font-extrabold text-slate-800">
+                과별 활동 체크
+              </p>
+              <p className="mt-0.5 text-xs font-bold text-slate-500">
+                {student.name} · {student.className}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
+              aria-label="활동 체크 닫기"
             >
-              <span className="mr-1">📚</span>{student.name}
-            </p>
-            <p className="text-xs text-slate-500">권 버튼을 누른 뒤 과를 체크하세요</p>
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </header>
 
-        <div className="grid grid-cols-2 gap-3 px-5 pb-5 pt-2">
-          {KINDERGARTEN_BOOKS.map((book) => {
-            const lessons = Array.from({ length: book.end - book.start + 1 }, (_, i) => book.start + i);
-            const checkedCount = lessons.filter((lesson) => states[lesson] === "success").length;
-            const checked = checkedCount === lessons.length;
+        <div className="shrink-0 px-5 pb-3">
+          <div className="flex gap-2 overflow-x-auto rounded-3xl bg-pastel-cream p-1">
+            {KINDERGARTEN_BOOKS.map((book) => {
+              const active = selectedBook.id === book.id;
+              return (
+                <button
+                  key={book.id}
+                  type="button"
+                  onClick={() => setSelectedBookId(book.id)}
+                  className={cn(
+                    "h-10 shrink-0 rounded-2xl px-4 text-sm font-extrabold transition active:scale-95",
+                    active
+                      ? "bg-white text-pastel-greenDeep shadow-sm ring-1 ring-pastel-greenDeep/20"
+                      : "text-slate-500"
+                  )}
+                >
+                  {book.title}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex-1 space-y-3 overflow-y-auto px-5 pb-4">
+          {selectedLessons.map((lesson) => {
+            const selectedCount = KINDERGARTEN_ACTIVITIES.filter(
+              (activity) => states[getKindergartenActivityKey(lesson, activity.key)] === "success"
+            ).length;
+            const complete = selectedCount === KINDERGARTEN_ACTIVITIES.length;
+            const progress = Math.round((selectedCount / KINDERGARTEN_ACTIVITIES.length) * 100);
             return (
-              <button
-                key={book.id}
-                type="button"
-                onClick={() => setSelectedBookId(book.id)}
-                aria-pressed={checked}
+              <section
+                key={lesson}
                 className={cn(
-                  "flex h-24 flex-col items-center justify-center rounded-3xl text-center shadow-sm transition active:scale-95",
-                  checked
-                    ? "bg-gradient-to-br from-pastel-greenDeep to-emerald-500 text-white shadow-soft"
-                    : "bg-pastel-cream text-slate-700 ring-1 ring-slate-200"
+                  "rounded-3xl bg-white p-4 shadow-soft ring-2 transition",
+                  complete ? "ring-pastel-greenDeep/70" : "ring-slate-100"
                 )}
               >
-                <span className="text-xl font-extrabold">{book.title}</span>
-                <span className={cn("mt-1 text-xs font-bold", checked ? "text-white/85" : "text-slate-500")}>
-                  {book.period}
-                </span>
-                <span className={cn("mt-1 text-[10px] font-extrabold", checked ? "text-white/80" : "text-slate-400")}>
-                  {checkedCount}/13과
-                </span>
-              </button>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-800">
+                      {lesson}과: {LESSON_TITLES[lesson]}
+                    </h3>
+                    <p className="mt-1 text-xs font-bold text-slate-400">
+                      {selectedCount}/3 완료
+                    </p>
+                  </div>
+                  {complete && (
+                    <span className="rounded-full bg-pastel-greenDeep px-3 py-1 text-xs font-extrabold text-white">
+                      완료
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-pastel-cream">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-pastel-greenDeep to-pastel-blueDeep transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {KINDERGARTEN_ACTIVITIES.map((activity) => {
+                    const selected = states[getKindergartenActivityKey(lesson, activity.key)] === "success";
+                    return (
+                      <button
+                        key={activity.key}
+                        type="button"
+                        onClick={() => onToggle(lesson, activity.key)}
+                        aria-pressed={selected}
+                        className={cn(
+                          "flex h-12 items-center justify-center rounded-2xl text-sm font-extrabold shadow-sm transition active:scale-95",
+                          selected && activity.color === "yellow" && "bg-pastel-yellowDeep text-white",
+                          selected && activity.color === "green" && "bg-pastel-greenDeep text-white",
+                          selected && activity.color === "blue" && "bg-pastel-blueDeep text-white",
+                          !selected && "bg-white text-slate-600 ring-2 ring-slate-200"
+                        )}
+                      >
+                        {activity.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             );
           })}
         </div>
 
-        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
+        <div className="flex shrink-0 gap-2 border-t border-slate-100 bg-white px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
           <button
             type="button"
             onClick={onClose}
-            className="h-14 flex-1 rounded-2xl bg-gradient-to-br from-pastel-greenDeep to-emerald-500 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
           >
-            확인
+            <Save className="h-5 w-5" />
+            저장하기
           </button>
         </div>
       </div>
-      {selectedBook && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="kindergarten-book-title"
-          className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-slate-900/45 px-0 backdrop-blur-sm"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedBookId(null);
-          }}
-        >
-          <div className="mx-auto flex max-h-[86dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-3xl bg-white shadow-soft">
-            <div className="flex shrink-0 justify-center pb-1 pt-3">
-              <span className="h-1.5 w-12 rounded-full bg-slate-200" />
-            </div>
-            <header className="flex shrink-0 items-center justify-between gap-3 bg-gradient-to-b from-pastel-green/40 to-transparent px-5 pb-4 pt-3">
-              <div>
-                <p id="kindergarten-book-title" className="text-xl font-extrabold text-slate-800">
-                  {selectedBook.title} <span className="text-sm text-slate-500">({selectedBook.period})</span>
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {selectedBook.start}~{selectedBook.end}과를 체크하세요
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedBookId(null)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
-                aria-label="권 선택으로 돌아가기"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </header>
-
-            <div className="flex-1 overflow-y-auto px-5 pb-4">
-              <div className="grid grid-cols-4 gap-2">
-                {Array.from(
-                  { length: selectedBook.end - selectedBook.start + 1 },
-                  (_, i) => selectedBook.start + i
-                ).map((lesson) => {
-                  const checked = states[lesson] === "success";
-                  return (
-                    <button
-                      key={lesson}
-                      type="button"
-                      onClick={() => onToggle(lesson)}
-                      aria-pressed={checked}
-                      className={cn(
-                        "flex h-14 items-center justify-center rounded-2xl text-base font-extrabold transition active:scale-95",
-                        checked
-                          ? "bg-pastel-greenDeep text-white shadow-soft"
-                          : "bg-pastel-cream text-slate-700 ring-1 ring-slate-200"
-                      )}
-                    >
-                      {lesson}과
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
-              <button
-                type="button"
-                onClick={() => setSelectedBookId(null)}
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 shadow-soft transition active:scale-[0.98]"
-                aria-label="권 선택으로 돌아가기"
-              >
-                <ArrowLeft className="h-6 w-6" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedBookId(null)}
-                className="h-14 flex-1 rounded-2xl bg-gradient-to-br from-pastel-greenDeep to-emerald-500 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
-              >
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
