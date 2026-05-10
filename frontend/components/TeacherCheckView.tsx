@@ -293,8 +293,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     }
   };
 
-  const handleBackToLogin = () => {
-    localStorage.removeItem("teacher_info");
+  const handleBackToModeSelect = () => {
     router.replace("/");
   };
 
@@ -335,9 +334,9 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
           </button>
           <button
             type="button"
-            onClick={handleBackToLogin}
+            onClick={handleBackToModeSelect}
             className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-white active:scale-95"
-            aria-label="로그인 화면으로 이동"
+            aria-label="화면 선택으로 이동"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>

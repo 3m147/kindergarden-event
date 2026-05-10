@@ -42,6 +42,17 @@ export default function StartView() {
   // 로그인 성공 시 잠시 환영 메시지를 보여주기 위한 상태
   const [loggedIn, setLoggedIn] = React.useState<TeacherAccount | null>(null);
 
+  React.useEffect(() => {
+    const savedTeacher = localStorage.getItem("teacher_info");
+    if (!savedTeacher) return;
+
+    try {
+      setLoggedIn(JSON.parse(savedTeacher));
+    } catch {
+      localStorage.removeItem("teacher_info");
+    }
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -110,19 +121,6 @@ export default function StartView() {
           <div className="grid w-full gap-3">
             <button
               type="button"
-              onClick={() => openTeacherMode("festival")}
-              className="flex min-h-20 items-center gap-4 rounded-3xl bg-gradient-to-br from-pastel-yellow to-pastel-pink px-5 py-4 text-left shadow-soft transition active:scale-[0.98]"
-            >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/80 text-pastel-yellowDeep shadow-sm">
-                <Trophy className="h-7 w-7" />
-              </span>
-              <span>
-                <span className="block text-lg font-extrabold text-slate-800">암송잔치</span>
-                <span className="mt-0.5 block text-xs font-bold text-slate-500">행사 암송 · 퀴즈 체크</span>
-              </span>
-            </button>
-            <button
-              type="button"
               onClick={() => openTeacherMode("kindergarten")}
               className="flex min-h-20 items-center gap-4 rounded-3xl bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep px-5 py-4 text-left text-white shadow-soft transition active:scale-[0.98]"
             >
@@ -132,6 +130,19 @@ export default function StartView() {
               <span>
                 <span className="block text-lg font-extrabold">유치부체크</span>
                 <span className="mt-0.5 block text-xs font-bold text-white/80">오늘 반별 체크 화면</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openTeacherMode("festival")}
+              className="flex min-h-20 items-center gap-4 rounded-3xl bg-gradient-to-br from-pastel-yellow to-pastel-pink px-5 py-4 text-left shadow-soft transition active:scale-[0.98]"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/80 text-pastel-yellowDeep shadow-sm">
+                <Trophy className="h-7 w-7" />
+              </span>
+              <span>
+                <span className="block text-lg font-extrabold text-slate-800">암송잔치</span>
+                <span className="mt-0.5 block text-xs font-bold text-slate-500">행사 암송 · 퀴즈 체크</span>
               </span>
             </button>
           </div>
