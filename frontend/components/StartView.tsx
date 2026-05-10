@@ -134,15 +134,16 @@ export default function StartView() {
             </button>
             <button
               type="button"
-              onClick={() => openTeacherMode("festival")}
-              className="flex min-h-20 items-center gap-4 rounded-3xl bg-gradient-to-br from-pastel-yellow to-pastel-pink px-5 py-4 text-left shadow-soft transition active:scale-[0.98]"
+              disabled
+              className="flex min-h-20 cursor-not-allowed items-center gap-4 rounded-3xl bg-slate-200 px-5 py-4 text-left opacity-70 shadow-sm"
+              aria-disabled="true"
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/80 text-pastel-yellowDeep shadow-sm">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-slate-400 shadow-sm">
                 <Trophy className="h-7 w-7" />
               </span>
               <span>
-                <span className="block text-lg font-extrabold text-slate-800">암송잔치</span>
-                <span className="mt-0.5 block text-xs font-bold text-slate-500">행사 암송 · 퀴즈 체크</span>
+                <span className="block text-lg font-extrabold text-slate-500">암송잔치</span>
+                <span className="mt-0.5 block text-xs font-bold text-slate-400">준비 중</span>
               </span>
             </button>
           </div>
