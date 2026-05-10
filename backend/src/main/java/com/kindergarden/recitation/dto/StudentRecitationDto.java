@@ -11,6 +11,7 @@ public record StudentRecitationDto(
         Long classId,
         Map<Integer, String> lessonStates,
         Map<Integer, String> quizStates,
+        Map<Integer, String> kindergartenStates,
         boolean submitted,
         String teacherName
 ) {}

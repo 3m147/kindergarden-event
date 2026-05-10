@@ -32,6 +32,7 @@ import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
 const TOTAL_RECITATIONS = 16;
 const TOTAL_QUIZZES = 18;
+const TOTAL_KINDERGARTEN_BOOKS = 4;
 type ToggleState = "success" | "fail" | undefined;
 
 function nextToggleState(current: ToggleState): ToggleState {
@@ -76,6 +77,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
   const [activeStudentId, setActiveStudentId] = React.useState<number | null>(null);
   const [modalStudentId, setModalStudentId] = React.useState<number | null>(null);
   const [quizModalStudentId, setQuizModalStudentId] = React.useState<number | null>(null);
+  const [kindergartenModalStudentId, setKindergartenModalStudentId] = React.useState<number | null>(null);
   const [actionStudentId, setActionStudentId] = React.useState<number | null>(null);
   const [submittingStudentId, setSubmittingStudentId] = React.useState<number | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -99,10 +101,12 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
       const mapped = data.map(s => {
         const lCount = Object.keys(s.lessonStates || {}).length;
         const qCount = Object.keys(s.quizStates || {}).length;
+        const kCount = Object.keys(s.kindergartenStates || {}).length;
         return {
           ...s,
           success: lCount === TOTAL_RECITATIONS,
-          quizSuccess: qCount === TOTAL_QUIZZES
+          quizSuccess: qCount === TOTAL_QUIZZES,
+          kindergartenSuccess: kCount === TOTAL_KINDERGARTEN_BOOKS
         };
       });
       setStudents(mapped);
@@ -126,6 +130,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     setActiveStudentId(null);
     setModalStudentId(null);
     setQuizModalStudentId(null);
+    setKindergartenModalStudentId(null);
     setActionStudentId(null);
   }, [loadStudents, selectedClassId, teacherInfo]);
 
@@ -135,6 +140,8 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     students.find((s) => s.studentId === modalStudentId) ?? null;
   const quizModalStudent =
     students.find((s) => s.studentId === quizModalStudentId) ?? null;
+  const kindergartenModalStudent =
+    students.find((s) => s.studentId === kindergartenModalStudentId) ?? null;
   const actionStudent =
     students.find((s) => s.studentId === actionStudentId) ?? null;
   const submitConfirmStudent =
@@ -145,12 +152,17 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     !!states && Object.keys(states).length === total;
   const recitationDone = students.filter((s) => isAllChecked(s.lessonStates, TOTAL_RECITATIONS)).length;
   const quizDone = students.filter((s) => isAllChecked(s.quizStates, TOTAL_QUIZZES)).length;
+  const kindergartenDone = students.filter((s) => isAllChecked(s.kindergartenStates, TOTAL_KINDERGARTEN_BOOKS)).length;
   const totalCount = students.length;
 
   // 학생 프로필 탭: 상단 프로필 동기화 + 액션 시트 오픈
   const handleSelect = (student: StudentRecitationDto) => {
     setActiveStudentId(student.studentId);
-    if (student.submitted) return; // 제출된 기록은 수정 불가
+    if (mode === "festival" && student.submitted) return; // 제출된 기록은 수정 불가
+    if (mode === "kindergarten") {
+      setKindergartenModalStudentId(student.studentId);
+      return;
+    }
     setActionStudentId(student.studentId);
   };
 
@@ -185,6 +197,10 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
 
   const handleQuizModalClose = () => {
     setQuizModalStudentId(null);
+  };
+
+  const handleKindergartenModalClose = () => {
+    setKindergartenModalStudentId(null);
   };
 
   // 퀴즈 팝업에서 뒤로가기 → 액션 시트로 복귀
@@ -260,6 +276,40 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
       );
     } catch (e) {
       console.error("API 저장 실패", e);
+    }
+  };
+
+  const handleToggleKindergartenBook = async (bookNum: number) => {
+    if (!kindergartenModalStudent) return;
+    const studentId = kindergartenModalStudent.studentId;
+    const nextState = kindergartenModalStudent.kindergartenStates?.[bookNum] ? undefined : "success";
+
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.studentId !== studentId) return s;
+        const currentStates = s.kindergartenStates || {};
+        const newStates = { ...currentStates };
+        if (nextState) newStates[bookNum] = nextState;
+        else delete newStates[bookNum];
+
+        return {
+          ...s,
+          kindergartenStates: newStates,
+          kindergartenSuccess: Object.keys(newStates).length === TOTAL_KINDERGARTEN_BOOKS
+        };
+      })
+    );
+
+    try {
+      await api.toggleRecitation(
+        studentId,
+        bookNum,
+        "KINDERGARTEN",
+        nextState === "success" ? true : null,
+        teacherInfo?.id || 1
+      );
+    } catch (e) {
+      console.error("유치부 체크 API 저장 실패", e);
     }
   };
 
@@ -384,6 +434,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
               <StudentTile
                 key={s.studentId}
                 student={s}
+                mode={mode}
                 active={s.studentId === activeStudent?.studentId}
                 onTap={() => handleSelect(s)}
                 onSubmit={() => handleSubmitClick(s)}
@@ -400,23 +451,34 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
         className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md rounded-t-3xl border-t border-pastel-yellowDeep/30 bg-white/95 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-4 shadow-soft backdrop-blur"
         aria-label="진행률 영역"
       >
-        {/* 암송/퀴즈 진행률을 분리해서 표기 — "어디까지 했지?"가 한 번에 보이도록 */}
-        <div className="mb-2 grid grid-cols-2 gap-2">
-          <ProgressBar
-            icon={<BookOpen className="h-4 w-4" />}
-            label="암송"
-            done={recitationDone}
-            total={totalCount}
-            color="green"
-          />
-          <ProgressBar
-            icon={<HelpCircle className="h-4 w-4" />}
-            label="퀴즈"
-            done={quizDone}
-            total={totalCount}
-            color="blue"
-          />
-        </div>
+        {mode === "kindergarten" ? (
+          <div className="mb-2">
+            <ProgressBar
+              icon={<BookOpen className="h-4 w-4" />}
+              label="유치부 체크"
+              done={kindergartenDone}
+              total={totalCount}
+              color="green"
+            />
+          </div>
+        ) : (
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            <ProgressBar
+              icon={<BookOpen className="h-4 w-4" />}
+              label="암송"
+              done={recitationDone}
+              total={totalCount}
+              color="green"
+            />
+            <ProgressBar
+              icon={<HelpCircle className="h-4 w-4" />}
+              label="퀴즈"
+              done={quizDone}
+              total={totalCount}
+              color="blue"
+            />
+          </div>
+        )}
       </nav>
 
       {/* 액션 시트 (암송 / 퀴즈 선택) */}
@@ -449,8 +511,17 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
         />
       )}
 
+      {/* 유치부 체크 팝업 */}
+      {kindergartenModalStudent && (
+        <StudentKindergartenModal
+          student={kindergartenModalStudent}
+          onClose={handleKindergartenModalClose}
+          onToggle={handleToggleKindergartenBook}
+        />
+      )}
+
       {/* 제출 확인 모달 — 브라우저 confirm 대신 톤에 맞춘 다이얼로그 */}
-      {submitConfirmStudent && (
+      {mode === "festival" && submitConfirmStudent && (
         <ConfirmDialog
           title="최종 제출할까요?"
           description={`${submitConfirmStudent.name}의 오늘 암송 결과를\n제출 후에는 수정할 수 없어요.`}
@@ -555,6 +626,7 @@ function ConfirmDialog({
 
 function StudentTile({
   student,
+  mode,
   active,
   onTap,
   onSubmit,
@@ -562,6 +634,7 @@ function StudentTile({
   canSubmit,
 }: {
   student: StudentRecitationDto;
+  mode: "festival" | "kindergarten";
   active: boolean;
   onTap: () => void;
   onSubmit: () => void;
@@ -570,11 +643,14 @@ function StudentTile({
 }) {
   const done = student.success;
   const quizDone = student.quizSuccess;
-  const allDone = done && quizDone;
+  const kindergartenDone = student.kindergartenSuccess;
+  const allDone = mode === "kindergarten" ? !!kindergartenDone : done && quizDone;
   const score = Object.values(student.lessonStates ?? {}).filter(s => s === 'success').length;
   const quizScore = Object.values(student.quizStates ?? {}).filter(s => s === 'success').length;
+  const kindergartenScore = Object.values(student.kindergartenStates ?? {}).filter(s => s === 'success').length;
   const recitationCount = Object.keys(student.lessonStates ?? {}).length;
   const quizCount = Object.keys(student.quizStates ?? {}).length;
+  const kindergartenCount = Object.keys(student.kindergartenStates ?? {}).length;
 
   return (
     <li className="flex flex-col gap-1.5">
@@ -583,13 +659,13 @@ function StudentTile({
         onClick={onTap}
         aria-pressed={done}
         aria-label={`${student.name} 과 선택 열기`}
-        disabled={student.submitted}
+        disabled={mode === "festival" && student.submitted}
         className={cn(
           "group relative flex w-full flex-col items-center gap-1.5 overflow-hidden rounded-3xl p-2 shadow-soft ring-1 ring-white/60 transition sm:gap-2 sm:p-3",
           "active:scale-95 disabled:opacity-60",
           allDone
             ? "bg-gradient-to-b from-pastel-green/70 to-pastel-green/40"
-            : student.submitted
+            : mode === "festival" && student.submitted
               ? "bg-slate-50"
               : "bg-white/90 backdrop-blur",
           active && "ring-4 ring-pastel-yellowDeep/60"
@@ -602,12 +678,12 @@ function StudentTile({
         <div
           className={cn(
             "relative h-16 w-16 overflow-hidden rounded-full border-[4px] bg-white transition-colors sm:h-20 sm:w-20",
-            allDone ? "border-pastel-greenDeep" : done ? "border-pastel-greenDeep/60" : quizDone ? "border-pastel-blueDeep/60" : "border-white"
+            allDone ? "border-pastel-greenDeep" : done || kindergartenDone ? "border-pastel-greenDeep/60" : quizDone ? "border-pastel-blueDeep/60" : "border-white"
           )}
         >
           <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
           {allDone && (
-            <span key={JSON.stringify(student.lessonStates) + JSON.stringify(student.quizStates)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/40">
+            <span key={JSON.stringify(student.lessonStates) + JSON.stringify(student.quizStates) + JSON.stringify(student.kindergartenStates)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/40">
               <Check className="h-7 w-7 text-white drop-shadow sm:h-8 sm:w-8" strokeWidth={3} />
             </span>
           )}
@@ -615,35 +691,39 @@ function StudentTile({
         <div className="flex flex-col items-center">
           <span className="text-xs font-extrabold text-slate-800 sm:text-sm">{student.name}</span>
           <div className="mt-0.5 flex items-center gap-1">
-            {done ? (
-              <span className="text-[10px] font-extrabold text-pastel-greenDeep sm:text-[11px]">📖 {score}</span>
-            ) : recitationCount > 0 ? (
-              <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">📖 {recitationCount}/{TOTAL_RECITATIONS}</span>
-            ) : null}
-            {quizDone ? (
-              <span className="text-[10px] font-extrabold text-pastel-blueDeep sm:text-[11px]">❓ {quizScore}</span>
-            ) : quizCount > 0 ? (
-              <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">❓ {quizCount}/{TOTAL_QUIZZES}</span>
-            ) : null}
+            {mode === "kindergarten" ? (
+              kindergartenDone ? (
+                <span className="text-[10px] font-extrabold text-pastel-greenDeep sm:text-[11px]">📚 {kindergartenScore}</span>
+              ) : kindergartenCount > 0 ? (
+                <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">📚 {kindergartenCount}/{TOTAL_KINDERGARTEN_BOOKS}</span>
+              ) : null
+            ) : (
+              <>
+                {done ? (
+                  <span className="text-[10px] font-extrabold text-pastel-greenDeep sm:text-[11px]">📖 {score}</span>
+                ) : recitationCount > 0 ? (
+                  <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">📖 {recitationCount}/{TOTAL_RECITATIONS}</span>
+                ) : null}
+                {quizDone ? (
+                  <span className="text-[10px] font-extrabold text-pastel-blueDeep sm:text-[11px]">❓ {quizScore}</span>
+                ) : quizCount > 0 ? (
+                  <span className="text-[10px] font-bold text-slate-400 sm:text-[11px]">❓ {quizCount}/{TOTAL_QUIZZES}</span>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </button>
-      <button
-        type="button"
-        onClick={onSubmit}
-        disabled={student.submitted || submitting || !canSubmit}
-        className={cn(
-          "h-9 rounded-2xl text-[11px] font-extrabold shadow-sm transition active:scale-95",
-          student.submitted
-            ? "bg-slate-200 text-slate-500"
-            : canSubmit
-              ? "bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep text-white shadow-soft"
-              : "bg-white/80 text-slate-400 ring-1 ring-slate-200",
-          "disabled:active:scale-100"
-        )}
-      >
-        {student.submitted ? "✓ 제출됨" : submitting ? "제출 중..." : "최종 제출"}
-      </button>
+      {mode === "festival" && (
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled
+          className="h-9 rounded-2xl bg-white/80 text-[11px] font-extrabold text-slate-400 shadow-sm ring-1 ring-slate-200 disabled:active:scale-100"
+        >
+          {student.submitted ? "✓ 제출됨" : submitting ? "제출 중..." : canSubmit ? "최종 제출 비활성화" : "최종 제출"}
+        </button>
+      )}
     </li>
   );
 }
@@ -775,6 +855,124 @@ function StudentLessonModal({
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-14 flex-1 rounded-2xl bg-gradient-to-br from-pastel-greenDeep to-emerald-500 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const KINDERGARTEN_BOOKS = [
+  { id: 1, title: "1권", period: "1~3월" },
+  { id: 2, title: "2권", period: "4~6월" },
+  { id: 3, title: "3권", period: "7~9월" },
+  { id: 4, title: "4권", period: "10~12월" },
+];
+
+/**
+ * 유치부 체크 팝업 — 학생별로 월별 권 체크만 빠르게 표시한다.
+ */
+function StudentKindergartenModal({
+  student,
+  onClose,
+  onToggle,
+}: {
+  student: StudentRecitationDto;
+  onClose: () => void;
+  onToggle: (bookNum: number) => void;
+}) {
+  const states = student.kindergartenStates ?? {};
+  const done = Object.keys(states).length === TOTAL_KINDERGARTEN_BOOKS;
+
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kindergarten-modal-title"
+      className="fixed inset-0 z-40 flex animate-fade-in items-end justify-center bg-slate-900/50 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="mx-auto flex w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-3xl bg-white shadow-soft">
+        <div className="flex shrink-0 justify-center pb-1 pt-3">
+          <span className="h-1.5 w-12 rounded-full bg-slate-200" />
+        </div>
+
+        <header className="flex shrink-0 items-center gap-3 bg-gradient-to-b from-pastel-green/40 to-transparent px-5 pb-4 pt-3">
+          <div className="relative shrink-0">
+            <div aria-hidden className="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-pastel-greenDeep to-emerald-300 opacity-70 blur-[2px]" />
+            <div className={cn(
+              "relative h-14 w-14 overflow-hidden rounded-full border-[4px] bg-white transition-colors",
+              done ? "border-pastel-greenDeep" : "border-white"
+            )}>
+              <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
+              {done && (
+                <span key={JSON.stringify(states)} className="absolute inset-0 flex animate-pop items-center justify-center rounded-full bg-pastel-greenDeep/30">
+                  <Check className="h-6 w-6 text-white drop-shadow" strokeWidth={3} />
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <p
+              id="kindergarten-modal-title"
+              className="truncate text-xl font-extrabold text-slate-800"
+            >
+              <span className="mr-1">📚</span>{student.name}
+            </p>
+            <p className="text-xs text-slate-500">권 버튼을 눌러 체크하거나 해제하세요</p>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-2 gap-3 px-5 pb-5 pt-2">
+          {KINDERGARTEN_BOOKS.map((book) => {
+            const checked = states[book.id] === "success";
+            return (
+              <button
+                key={book.id}
+                type="button"
+                onClick={() => onToggle(book.id)}
+                aria-pressed={checked}
+                className={cn(
+                  "flex h-24 flex-col items-center justify-center rounded-3xl text-center shadow-sm transition active:scale-95",
+                  checked
+                    ? "bg-gradient-to-br from-pastel-greenDeep to-emerald-500 text-white shadow-soft"
+                    : "bg-pastel-cream text-slate-700 ring-1 ring-slate-200"
+                )}
+              >
+                <span className="text-xl font-extrabold">{book.title}</span>
+                <span className={cn("mt-1 text-xs font-bold", checked ? "text-white/85" : "text-slate-500")}>
+                  {book.period}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
           <button
             type="button"
             onClick={onClose}

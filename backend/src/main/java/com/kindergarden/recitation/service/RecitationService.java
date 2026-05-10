@@ -49,6 +49,7 @@ public class RecitationService {
             
             Map<Integer, String> lessonStates = new HashMap<>();
             Map<Integer, String> quizStates = new HashMap<>();
+            Map<Integer, String> kindergartenStates = new HashMap<>();
             boolean submitted = false;
             String teacherName = "";
 
@@ -57,6 +58,8 @@ public class RecitationService {
                     lessonStates.put(r.getLessonNumber(), r.getResult().toLowerCase());
                 } else if ("QUIZ".equals(r.getType())) {
                     quizStates.put(r.getLessonNumber(), r.getResult().toLowerCase());
+                } else if ("KINDERGARTEN".equals(r.getType())) {
+                    kindergartenStates.put(r.getLessonNumber(), r.getResult().toLowerCase());
                 }
                 if (r.isSubmitted()) submitted = true;
                 if (teacherName.isEmpty() && r.getTeacher() != null) {
@@ -72,6 +75,7 @@ public class RecitationService {
                     s.getClassEntity().getId(),
                     lessonStates,
                     quizStates,
+                    kindergartenStates,
                     submitted,
                     teacherName
             );

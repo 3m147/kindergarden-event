@@ -21,12 +21,14 @@ export type StudentRecitationDto = {
   classId: number;
   lessonStates: Record<number, "success" | "fail">;
   quizStates: Record<number, "success" | "fail">;
+  kindergartenStates: Record<number, "success" | "fail">;
   submitted: boolean;
   teacherName: string;
   // 클라이언트에서 계산해 붙이는 파생 필드 (서버 응답에는 없음).
   // "이 학생의 모든 과/퀴즈가 표시됐는가?" — 프로필 그리드의 완료 표시에 사용.
   success?: boolean;
   quizSuccess?: boolean;
+  kindergartenSuccess?: boolean;
 };
 
 export type AuthResponse = {
