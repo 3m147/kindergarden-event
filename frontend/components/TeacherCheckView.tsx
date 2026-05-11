@@ -58,10 +58,10 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
   const router = useRouter();
   const screenTitle = mode === "kindergarten" ? "유치부 체크" : "암송잔치";
   const screenSubtitle = mode === "kindergarten" ? "오늘 반별 체크" : "행사 암송 체크";
-  
+
   // 교사 정보 로드
   const [teacherInfo, setTeacherInfo] = React.useState<any>(null);
-  
+
   React.useEffect(() => {
     const info = localStorage.getItem("teacher_info");
     if (info) {
@@ -234,9 +234,9 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
 
     try {
       await api.toggleRecitation(
-        studentId, 
-        quizNum, 
-        "QUIZ", 
+        studentId,
+        quizNum,
+        "QUIZ",
         nextState === undefined ? null : nextState === 'success',
         teacherInfo?.id || 1
       );
@@ -269,9 +269,9 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
 
     try {
       await api.toggleRecitation(
-        studentId, 
-        lessonNum, 
-        "RECITATION", 
+        studentId,
+        lessonNum,
+        "RECITATION",
         nextState === undefined ? null : nextState === 'success',
         teacherInfo?.id || 1
       );
@@ -871,10 +871,10 @@ function StudentLessonModal({
 }
 
 const KINDERGARTEN_BOOKS = [
-  { id: 1, title: "1~3과", start: 1, end: 3 },
-  { id: 2, title: "4~6과", start: 4, end: 6 },
-  { id: 3, title: "7~9과", start: 7, end: 9 },
-  { id: 4, title: "10~12과", start: 10, end: 12 },
+  { id: 1, title: "1~3월", start: 1, end: 13 },
+  { id: 2, title: "4~6월", start: 14, end: 26 },
+  { id: 3, title: "7~9월", start: 27, end: 39 },
+  { id: 4, title: "10~12월", start: 40, end: 52 },
 ];
 
 const KINDERGARTEN_ACTIVITIES = [
@@ -884,18 +884,58 @@ const KINDERGARTEN_ACTIVITIES = [
 ] as const;
 
 const LESSON_TITLES: Record<number, string> = {
-  1: "첫 번째 만남",
-  2: "하나님이 주신 마음",
-  3: "기쁨으로 외워요",
-  4: "말씀을 들어요",
-  5: "친구와 나눠요",
-  6: "작은 약속",
-  7: "감사하는 마음",
-  8: "사랑을 배워요",
-  9: "믿음의 걸음",
-  10: "기도하는 어린이",
-  11: "말씀의 열매",
-  12: "함께 자라요",
+  1: "친구야 안녕",
+  2: "나는 교회학교가 좋아요",
+  3: "보이지 않는 하나님",
+  4: "나를 사랑하시는 하나님",
+  5: "성경은 하나님이 보내신 편지",
+  6: "빛을 만드신 하나님",
+  7: "하늘을 만드신 하나님",
+  8: "땅에는 나무와 꽃들이 있어요",
+  9: "해와 달과 별을 만드신 하나님",
+  10: "새를 만드신 하나님",
+  11: "물고기를 만드신 하나님",
+  12: "땅에는 동물들이 살아요",
+  13: "하나님은 흙으로 사람을 만드셨어요",
+  14: "에덴동산",
+  15: "방주에 타세요",
+  16: "바벨탑을 쌓았어요",
+  17: "하나님의 말씀을 따른 아브람",
+  18: "이삭을 바친 아브라함",
+  19: "쌍둥이 형제 에서와 야곱",
+  20: "총리가 된 요셉",
+  21: "물에서 건진 모세",
+  22: "열가지 재앙",
+  23: "홍해를 건넜어요",
+  24: "광야에서 지켜주신 하나님",
+  25: "하나님을 의지한 여호수아와 갈렙",
+  26: "무너진 여리고성",
+  27: "믿음의 승리자 기드온",
+  28: "힘을 잃은 삼손",
+  29: "말씀을 따르지 않은 사울 왕",
+  30: "용감한 다윗",
+  31: "다윗과 요나단",
+  32: "지혜의 왕 솔로몬",
+  33: "선지자 엘리야",
+  34: "기도하는 다니엘",
+  35: "물고기 뱃속에 갇힌 요나",
+  36: "말씀대로 예수님께서 태어나셨어요",
+  37: "지혜로우신 예수님",
+  38: "시험을 이기신 예수님",
+  39: "예수님께서는 어린이를 사랑하세요",
+  40: "물로 포도주를 만드셨어요",
+  41: "예수님은 아픈 사람을 고쳐 주셨어요",
+  42: "많은 사람을 먹이셨어요",
+  43: "거친 바다를 잔잔하게 하셨어요",
+  44: "죽은 나사로를 살리셨어요",
+  45: "다시 찾은 아들",
+  46: "삭개오는 예수님을 만났어요",
+  47: "예수님께서 제자의 발을 씻기셨어요",
+  48: "고난 받으신 예수님",
+  49: "예수님은 다시 살아나셨어요",
+  50: "다시 오실 예수님",
+  51: "천국",
+  52: "하나님 감사해요"
 };
 
 function getKindergartenActivityKey(lesson: number, activityType: string) {
