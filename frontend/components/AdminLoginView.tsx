@@ -12,7 +12,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { Eye, EyeOff, Shield, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Shield, ArrowLeft, LogOut } from "lucide-react";
 import { api } from "@/lib/api";
 
 export default function AdminLoginView() {
@@ -23,6 +23,21 @@ export default function AdminLoginView() {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [loggedIn, setLoggedIn] = React.useState(false);
+  const [alreadyAuthenticated, setAlreadyAuthenticated] = React.useState(false);
+
+  React.useEffect(() => {
+    setAlreadyAuthenticated(localStorage.getItem("admin_authenticated") === "true");
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("admin_authenticated");
+    setAlreadyAuthenticated(false);
+    setLoggedIn(false);
+    setUserId("");
+    setPassword("");
+    setError(null);
+    setLoading(false);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +89,41 @@ export default function AdminLoginView() {
                 style={{ animationDelay: `${i * 0.15}s` }}
               />
             ))}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (alreadyAuthenticated) {
+    return (
+      <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center justify-center bg-slate-900 px-6">
+        <div className="flex w-full animate-fade-in flex-col items-center gap-5">
+          <div className="flex h-28 w-28 items-center justify-center rounded-full border-[5px] border-amber-400 bg-slate-800 shadow-soft">
+            <Shield className="h-14 w-14 text-amber-400" />
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-extrabold text-white">관리자 로그인됨</p>
+            <p className="mt-2 text-sm text-slate-400">
+              대시보드로 이동하거나 로그아웃할 수 있습니다.
+            </p>
+          </div>
+          <div className="grid w-full gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/admin/dashboard")}
+              className="h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-base font-extrabold text-slate-900 shadow-soft transition active:scale-[0.98]"
+            >
+              대시보드로 이동
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-800 text-sm font-extrabold text-slate-400 shadow-sm ring-1 ring-slate-700 transition hover:text-white active:scale-[0.98]"
+            >
+              <LogOut className="h-4 w-4" />
+              로그아웃
+            </button>
           </div>
         </div>
       </main>

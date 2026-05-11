@@ -13,7 +13,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { ClipboardCheck, Eye, EyeOff, LogIn, Sparkles, Trophy } from "lucide-react";
+import { ClipboardCheck, Eye, EyeOff, LogIn, LogOut, Sparkles, Trophy } from "lucide-react";
 import { api, resolveMediaUrl } from "@/lib/api";
 
 function todayLabel() {
@@ -92,6 +92,16 @@ export default function StartView() {
     router.push(`/check/${loggedIn.classId}?mode=${mode}`);
   };
 
+  const handleTeacherLogout = () => {
+    localStorage.removeItem("teacher_info");
+    setLoggedIn(null);
+    setUserId("");
+    setPassword("");
+    setLoading(false);
+    setError(null);
+    router.replace("/");
+  };
+
   // 로그인 성공 후 선생님이 사용할 화면 선택
   if (loggedIn) {
     return (
@@ -147,6 +157,14 @@ export default function StartView() {
               </span>
             </button>
           </div>
+          <button
+            type="button"
+            onClick={handleTeacherLogout}
+            className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white/80 text-sm font-extrabold text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:bg-white hover:text-slate-700 active:scale-[0.98]"
+          >
+            <LogOut className="h-4 w-4" />
+            로그아웃
+          </button>
         </div>
       </main>
     );
