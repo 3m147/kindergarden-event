@@ -15,10 +15,30 @@ import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
 const TOTAL_RECITATIONS = 16;
 const TOTAL_QUIZZES = 18;
+const TOTAL_KINDERGARTEN_LESSONS = 52;
+const KINDERGARTEN_ACTIVITY_TYPES = [
+  { key: "KINDERGARTEN_ATTENDANCE", label: "출석", color: "amber" },
+  { key: "KINDERGARTEN_FOUNDATION", label: "머릿돌", color: "emerald" },
+  { key: "KINDERGARTEN_RECITATION", label: "암송", color: "sky" },
+] as const;
 
 function countSuccess(states: Record<number, "success" | "fail"> | undefined): number {
   if (!states) return 0;
   return Object.values(states).filter((s) => s === "success").length;
+}
+
+function countKindergartenActivity(
+  student: StudentRecitationDto,
+  activityType: string
+): number {
+  const states = student.kindergartenActivityStates ?? {};
+  return Array.from({ length: TOTAL_KINDERGARTEN_LESSONS }, (_, i) => i + 1)
+    .filter((lesson) => states[`${lesson}:${activityType}`] === "success").length;
+}
+
+function toPercent(count: number, total = TOTAL_KINDERGARTEN_LESSONS) {
+  if (total <= 0) return 0;
+  return Math.round((count / total) * 100);
 }
 
 export default function AdminDashboardView() {
@@ -87,10 +107,8 @@ export default function AdminDashboardView() {
 
   if (!authenticated) return null;
 
-  const submittedOnly = students.filter((s) => s.submitted);
-
-  // 최종 제출된 학생만 반별로 그룹화
-  const classGroups = submittedOnly.reduce<Record<number, { className: string; teacherName: string; students: StudentRecitationDto[] }>>((acc, s) => {
+  // 유치부 체크는 최종 제출 없이도 저장되므로 전체 학생을 반별로 그룹화
+  const classGroups = students.reduce<Record<number, { className: string; teacherName: string; students: StudentRecitationDto[] }>>((acc, s) => {
     if (!acc[s.classId]) acc[s.classId] = { className: s.className, teacherName: s.teacherName, students: [] };
     acc[s.classId].students.push(s);
     return acc;
@@ -98,7 +116,7 @@ export default function AdminDashboardView() {
 
   const classIds = Object.keys(classGroups).map(Number).sort();
   const totalStudents = students.length;
-  const submittedStudents = submittedOnly.length;
+  const submittedStudents = students.filter((s) => s.submitted).length;
   const submittedClasses = classIds.length;
 
   return (
@@ -150,7 +168,7 @@ export default function AdminDashboardView() {
       <section className="grid grid-cols-3 gap-3 px-5 pt-2">
         <StatCard icon={<Users className="h-5 w-5" />} label="전체 학생" value={`${totalStudents}명`} color="blue" />
         <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="제출 완료" value={`${submittedStudents}명`} color="green" />
-        <StatCard icon={<BookOpen className="h-5 w-5" />} label="제출 반" value={`${submittedClasses}반`} color="amber" />
+        <StatCard icon={<BookOpen className="h-5 w-5" />} label="표시 반" value={`${submittedClasses}반`} color="amber" />
       </section>
 
       {/* 반별 아코디언 */}
@@ -159,7 +177,7 @@ export default function AdminDashboardView() {
         <div className="flex flex-col gap-3">
           {classIds.length === 0 && (
             <div className="rounded-2xl bg-slate-800 px-4 py-8 text-center text-sm font-bold text-slate-500 ring-1 ring-slate-700">
-              아직 최종 제출된 학생이 없습니다.
+              아직 표시할 학생 정보가 없습니다.
             </div>
           )}
           {classIds.map((classId) => {
@@ -186,7 +204,7 @@ export default function AdminDashboardView() {
                     <div>
                       <p className="text-sm font-extrabold text-white">{group.className}</p>
                       <p className="text-xs text-slate-400">
-                        {group.teacherName || "담당"} 선생님 · 제출 {group.students.length}명
+                        {group.teacherName || "담당"} 선생님 · 학생 {group.students.length}명
                       </p>
                     </div>
                   </div>
@@ -195,9 +213,6 @@ export default function AdminDashboardView() {
                       <p className="text-xs text-slate-400">평균 암송 <span className="font-bold text-emerald-400">{avgRecitation}</span>/{TOTAL_RECITATIONS}</p>
                       <p className="text-xs text-slate-400">평균 퀴즈 <span className="font-bold text-sky-400">{avgQuiz}</span>/{TOTAL_QUIZZES}</p>
                     </div>
-                    {group.students.length > 0 && (
-                      <span className="rounded-lg bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-400">제출됨</span>
-                    )}
                     {isExpanded ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
                   </div>
                 </button>
@@ -209,6 +224,9 @@ export default function AdminDashboardView() {
                       {group.students.map((student) => {
                           const recitationScore = countSuccess(student.lessonStates);
                           const quizScore = countSuccess(student.quizStates);
+                          const attendanceCount = countKindergartenActivity(student, "KINDERGARTEN_ATTENDANCE");
+                          const foundationCount = countKindergartenActivity(student, "KINDERGARTEN_FOUNDATION");
+                          const kindergartenRecitationCount = countKindergartenActivity(student, "KINDERGARTEN_RECITATION");
                           const isStudentExpanded = expandedStudent === student.studentId;
 
                           return (
@@ -225,7 +243,12 @@ export default function AdminDashboardView() {
                                       alt={student.name} className="h-full w-full object-cover" draggable={false}
                                     />
                                   </div>
-                                  <span className="text-sm font-bold text-white">{student.name}</span>
+                                  <div>
+                                    <span className="text-sm font-bold text-white">{student.name}</span>
+                                    <p className="mt-0.5 text-[11px] font-bold text-slate-500">
+                                      출석 {toPercent(attendanceCount)}% · 머릿돌 {toPercent(foundationCount)}% · 암송 {toPercent(kindergartenRecitationCount)}%
+                                    </p>
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span className="flex items-center gap-1 text-xs font-bold">
@@ -245,6 +268,22 @@ export default function AdminDashboardView() {
                               {/* 상세 과별 현황 */}
                               {isStudentExpanded && (
                                 <div className="border-t border-slate-700/50 px-3 pb-3 pt-2">
+                                  <p className="mb-2 text-xs font-bold text-amber-300">🌱 유치부 활동</p>
+                                  <div className="mb-4 grid grid-cols-3 gap-2">
+                                    {KINDERGARTEN_ACTIVITY_TYPES.map((activity) => {
+                                      const count = countKindergartenActivity(student, activity.key);
+                                      return (
+                                        <ActivityDonut
+                                          key={activity.key}
+                                          label={activity.label}
+                                          count={count}
+                                          total={TOTAL_KINDERGARTEN_LESSONS}
+                                          color={activity.color}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+
                                   <p className="mb-2 text-xs font-bold text-emerald-400">📖 암송 (성공 {recitationScore}/{TOTAL_RECITATIONS})</p>
                                   <div className="mb-3 grid grid-cols-8 gap-1">
                                     {Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1).map((n) => {
@@ -322,6 +361,43 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label:
       {icon}
       <span className="text-lg font-extrabold">{value}</span>
       <span className="text-[10px] font-bold text-slate-400">{label}</span>
+    </div>
+  );
+}
+
+function ActivityDonut({
+  label,
+  count,
+  total,
+  color,
+}: {
+  label: string;
+  count: number;
+  total: number;
+  color: "amber" | "emerald" | "sky";
+}) {
+  const percent = toPercent(count, total);
+  const colorMap = {
+    amber: { fill: "#f59e0b", text: "text-amber-300", ring: "ring-amber-500/25" },
+    emerald: { fill: "#10b981", text: "text-emerald-300", ring: "ring-emerald-500/25" },
+    sky: { fill: "#38bdf8", text: "text-sky-300", ring: "ring-sky-500/25" },
+  }[color];
+
+  return (
+    <div className={cn("rounded-2xl bg-slate-800/80 p-3 text-center ring-1", colorMap.ring)}>
+      <div
+        className="mx-auto grid h-16 w-16 place-items-center rounded-full"
+        style={{
+          background: `conic-gradient(${colorMap.fill} ${percent * 3.6}deg, #334155 0deg)`,
+        }}
+        aria-label={`${label} ${percent}%`}
+      >
+        <div className="grid h-11 w-11 place-items-center rounded-full bg-slate-900">
+          <span className={cn("text-sm font-extrabold", colorMap.text)}>{percent}%</span>
+        </div>
+      </div>
+      <p className="mt-2 text-xs font-extrabold text-white">{label}</p>
+      <p className="mt-0.5 text-[10px] font-bold text-slate-500">{count}/{total}</p>
     </div>
   );
 }
