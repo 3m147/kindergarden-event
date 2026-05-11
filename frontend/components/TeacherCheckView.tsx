@@ -958,6 +958,10 @@ function getKindergartenActivityKey(lesson: number, activityType: string) {
   return `${lesson}:${activityType}`;
 }
 
+function getKindergartenBookIdForLesson(lesson: number) {
+  return KINDERGARTEN_BOOKS.find((book) => lesson >= book.start && lesson <= book.end)?.id ?? 1;
+}
+
 /**
  * 유치부 체크 팝업 — 바텀시트 안에서 과별 활동 칩을 빠르게 표시한다.
  */
@@ -979,6 +983,9 @@ function StudentKindergartenModal({
     (_, i) => selectedBook.start + i
   );
   const availableLessonLimit = getKindergartenAvailableLessonLimit();
+  const weeklyLesson = availableLessonLimit;
+  const weeklyBookId = getKindergartenBookIdForLesson(weeklyLesson);
+
   React.useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -1045,7 +1052,27 @@ function StudentKindergartenModal({
         </header>
 
         <div className="shrink-0 px-5 pb-3">
-          <div className="flex gap-2 overflow-x-auto rounded-3xl bg-pastel-cream p-1">
+          <div className="mb-3 rounded-3xl bg-gradient-to-br from-pastel-yellow/70 to-pastel-green/50 p-3 shadow-sm ring-1 ring-pastel-yellowDeep/20">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-extrabold tracking-[0.08em] text-pastel-yellowDeep">
+                  이번 주 체크
+                </p>
+                <p className="mt-1 truncate text-sm font-extrabold text-slate-800">
+                  {weeklyLesson}과: {LESSON_TITLES[weeklyLesson]}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedBookId(weeklyBookId)}
+                className="h-9 shrink-0 rounded-2xl bg-white px-3 text-xs font-extrabold text-pastel-greenDeep shadow-sm ring-1 ring-white/70 transition active:scale-95"
+              >
+                바로가기
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1 rounded-3xl bg-pastel-cream p-1">
             {KINDERGARTEN_BOOKS.map((book) => {
               const active = selectedBook.id === book.id;
               return (
@@ -1054,7 +1081,7 @@ function StudentKindergartenModal({
                   type="button"
                   onClick={() => setSelectedBookId(book.id)}
                   className={cn(
-                    "h-10 shrink-0 rounded-2xl px-4 text-sm font-extrabold transition active:scale-95",
+                    "h-10 min-w-0 rounded-2xl px-1 text-center text-[11px] font-extrabold transition active:scale-95 sm:text-xs",
                     active
                       ? "bg-white text-pastel-greenDeep shadow-sm ring-1 ring-pastel-greenDeep/20"
                       : "text-slate-500"
