@@ -962,11 +962,6 @@ function StudentKindergartenModal({
     { length: selectedBook.end - selectedBook.start + 1 },
     (_, i) => selectedBook.start + i
   );
-  const attendanceCount = Array.from({ length: TOTAL_KINDERGARTEN_LESSONS }, (_, i) => i + 1)
-    .filter((lesson) => states[getKindergartenActivityKey(lesson, "KINDERGARTEN_ATTENDANCE")] === "success").length;
-  const recitationCount = Array.from({ length: TOTAL_KINDERGARTEN_LESSONS }, (_, i) => i + 1)
-    .filter((lesson) => states[getKindergartenActivityKey(lesson, "KINDERGARTEN_RECITATION")] === "success").length;
-
   React.useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -993,38 +988,6 @@ function StudentKindergartenModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div aria-hidden className="pointer-events-none absolute inset-x-4 top-8 mx-auto max-w-md opacity-60 blur-[1px]">
-        <div className="rounded-[2rem] bg-pastel-cream p-5 shadow-soft">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-extrabold text-slate-800">나의 활동 관리</h2>
-            <Sun className="h-5 w-5 text-pastel-yellowDeep" />
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="relative">
-              <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-white bg-white shadow-soft">
-                <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
-              </div>
-              <span className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center rounded-full bg-pastel-yellowDeep text-white shadow-sm">
-                <Crown className="h-4 w-4" />
-              </span>
-            </div>
-            <p className="text-xl font-extrabold text-slate-800">{student.name}</p>
-            <p className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-pastel-greenDeep">{student.className}</p>
-          </div>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-3xl bg-white/90 p-4 shadow-sm">
-              <p className="text-xs font-bold text-slate-400">이번 달 출석</p>
-              <p className="mt-1 text-lg font-extrabold text-slate-800">{attendanceCount}/15</p>
-            </div>
-            <div className="rounded-3xl bg-white/90 p-4 shadow-sm">
-              <p className="text-xs font-bold text-slate-400">암송 목표</p>
-              <p className="mt-1 text-lg font-extrabold text-slate-800">{recitationCount}/30</p>
-            </div>
-          </div>
-          <div className="mt-5 h-14 rounded-3xl bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep" />
-        </div>
-      </div>
-
       <div className="relative mx-auto flex h-[76dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-soft">
         <div className="flex shrink-0 justify-center pb-1 pt-3">
           <span className="h-1.5 w-12 rounded-full bg-slate-200" />
