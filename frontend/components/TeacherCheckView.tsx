@@ -958,10 +958,6 @@ function getKindergartenActivityKey(lesson: number, activityType: string) {
   return `${lesson}:${activityType}`;
 }
 
-function getKindergartenBookIdForLesson(lesson: number) {
-  return KINDERGARTEN_BOOKS.find((book) => lesson >= book.start && lesson <= book.end)?.id ?? 1;
-}
-
 /**
  * 유치부 체크 팝업 — 바텀시트 안에서 과별 활동 칩을 빠르게 표시한다.
  */
@@ -984,7 +980,9 @@ function StudentKindergartenModal({
   );
   const availableLessonLimit = getKindergartenAvailableLessonLimit();
   const weeklyLesson = availableLessonLimit;
-  const weeklyBookId = getKindergartenBookIdForLesson(weeklyLesson);
+  const weeklySelectedCount = KINDERGARTEN_ACTIVITIES.filter(
+    (activity) => states[getKindergartenActivityKey(weeklyLesson, activity.key)] === "success"
+  ).length;
 
   React.useEffect(() => {
     const prev = document.body.style.overflow;
@@ -1053,7 +1051,7 @@ function StudentKindergartenModal({
 
         <div className="shrink-0 px-5 pb-3">
           <div className="mb-3 rounded-3xl bg-gradient-to-br from-pastel-yellow/70 to-pastel-green/50 p-3 shadow-sm ring-1 ring-pastel-yellowDeep/20">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-extrabold tracking-[0.08em] text-pastel-yellowDeep">
                   이번 주 체크
@@ -1061,14 +1059,37 @@ function StudentKindergartenModal({
                 <p className="mt-1 truncate text-sm font-extrabold text-slate-800">
                   {weeklyLesson}과: {LESSON_TITLES[weeklyLesson]}
                 </p>
+                <p className="mt-1 text-[11px] font-bold text-slate-500">
+                  {weeklySelectedCount}/3 완료
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedBookId(weeklyBookId)}
-                className="h-9 shrink-0 rounded-2xl bg-white px-3 text-xs font-extrabold text-pastel-greenDeep shadow-sm ring-1 ring-white/70 transition active:scale-95"
-              >
-                바로가기
-              </button>
+              {weeklySelectedCount === KINDERGARTEN_ACTIVITIES.length && (
+                <span className="shrink-0 rounded-full bg-pastel-greenDeep px-3 py-1 text-xs font-extrabold text-white">
+                  완료
+                </span>
+              )}
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {KINDERGARTEN_ACTIVITIES.map((activity) => {
+                const selected = states[getKindergartenActivityKey(weeklyLesson, activity.key)] === "success";
+                return (
+                  <button
+                    key={activity.key}
+                    type="button"
+                    onClick={() => onToggle(weeklyLesson, activity.key)}
+                    aria-pressed={selected}
+                    className={cn(
+                      "flex h-11 items-center justify-center rounded-2xl text-sm font-extrabold shadow-sm transition active:scale-95",
+                      selected && activity.color === "yellow" && "bg-pastel-yellowDeep text-white",
+                      selected && activity.color === "green" && "bg-pastel-greenDeep text-white",
+                      selected && activity.color === "blue" && "bg-pastel-blueDeep text-white",
+                      !selected && "bg-white/90 text-slate-600 ring-1 ring-white/80"
+                    )}
+                  >
+                    {activity.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
