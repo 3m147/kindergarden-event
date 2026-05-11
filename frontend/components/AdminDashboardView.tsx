@@ -41,9 +41,14 @@ function toPercent(count: number, total = TOTAL_KINDERGARTEN_LESSONS) {
   return Math.round((count / total) * 100);
 }
 
-export default function AdminDashboardView() {
+export default function AdminDashboardView({
+  initialMode = "kindergarten",
+}: {
+  initialMode?: "festival" | "kindergarten";
+} = {}) {
   const router = useRouter();
   const [authenticated, setAuthenticated] = React.useState(false);
+  const [mode, setMode] = React.useState<"festival" | "kindergarten">(initialMode);
   const [expandedClass, setExpandedClass] = React.useState<number | null>(null);
   const [expandedStudent, setExpandedStudent] = React.useState<number | null>(null);
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
@@ -107,8 +112,10 @@ export default function AdminDashboardView() {
 
   if (!authenticated) return null;
 
-  // 유치부 체크는 최종 제출 없이도 저장되므로 전체 학생을 반별로 그룹화
-  const classGroups = students.reduce<Record<number, { className: string; teacherName: string; students: StudentRecitationDto[] }>>((acc, s) => {
+  const submittedOnly = students.filter((s) => s.submitted);
+  const visibleStudents = mode === "festival" ? submittedOnly : students;
+
+  const classGroups = visibleStudents.reduce<Record<number, { className: string; teacherName: string; students: StudentRecitationDto[] }>>((acc, s) => {
     if (!acc[s.classId]) acc[s.classId] = { className: s.className, teacherName: s.teacherName, students: [] };
     acc[s.classId].students.push(s);
     return acc;
@@ -116,8 +123,10 @@ export default function AdminDashboardView() {
 
   const classIds = Object.keys(classGroups).map(Number).sort();
   const totalStudents = students.length;
-  const submittedStudents = students.filter((s) => s.submitted).length;
-  const submittedClasses = classIds.length;
+  const submittedStudents = submittedOnly.length;
+  const visibleClasses = classIds.length;
+  const screenTitle = mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
+  const screenSubtitle = mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-8">
@@ -129,8 +138,8 @@ export default function AdminDashboardView() {
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-extrabold text-white sm:text-xl">관리자 대시보드</h1>
-              <p className="text-xs text-slate-400">전체 암송 현황</p>
+              <h1 className="text-lg font-extrabold text-white sm:text-xl">{screenTitle}</h1>
+              <p className="text-xs text-slate-400">{screenSubtitle}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -164,20 +173,62 @@ export default function AdminDashboardView() {
         </div>
       </header>
 
+      {/* 화면 선택 */}
+      <section className="px-5 pt-2">
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("kindergarten");
+              setExpandedClass(null);
+              setExpandedStudent(null);
+              router.push("/admin/dashboard/kindergarten");
+            }}
+            className={cn(
+              "h-11 rounded-xl text-sm font-extrabold transition active:scale-[0.98]",
+              mode === "kindergarten"
+                ? "bg-emerald-500 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            유치부 체크
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("festival");
+              setExpandedClass(null);
+              setExpandedStudent(null);
+              router.push("/admin/dashboard/festival");
+            }}
+            className={cn(
+              "h-11 rounded-xl text-sm font-extrabold transition active:scale-[0.98]",
+              mode === "festival"
+                ? "bg-amber-400 text-slate-900 shadow"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            암송잔치
+          </button>
+        </div>
+      </section>
+
       {/* 통계 카드 */}
       <section className="grid grid-cols-3 gap-3 px-5 pt-2">
         <StatCard icon={<Users className="h-5 w-5" />} label="전체 학생" value={`${totalStudents}명`} color="blue" />
         <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="제출 완료" value={`${submittedStudents}명`} color="green" />
-        <StatCard icon={<BookOpen className="h-5 w-5" />} label="표시 반" value={`${submittedClasses}반`} color="amber" />
+        <StatCard icon={<BookOpen className="h-5 w-5" />} label="표시 반" value={`${visibleClasses}반`} color="amber" />
       </section>
 
       {/* 반별 아코디언 */}
       <section className="mt-6 px-5">
-        <h2 className="mb-3 text-base font-extrabold text-slate-300">📋 반별 점수 현황</h2>
+        <h2 className="mb-3 text-base font-extrabold text-slate-300">
+          {mode === "festival" ? "📋 암송잔치 반별 현황" : "🌱 유치부 반별 현황"}
+        </h2>
         <div className="flex flex-col gap-3">
           {classIds.length === 0 && (
             <div className="rounded-2xl bg-slate-800 px-4 py-8 text-center text-sm font-bold text-slate-500 ring-1 ring-slate-700">
-              아직 표시할 학생 정보가 없습니다.
+              {mode === "festival" ? "아직 최종 제출된 학생이 없습니다." : "아직 표시할 학생 정보가 없습니다."}
             </div>
           )}
           {classIds.map((classId) => {
@@ -204,7 +255,7 @@ export default function AdminDashboardView() {
                     <div>
                       <p className="text-sm font-extrabold text-white">{group.className}</p>
                       <p className="text-xs text-slate-400">
-                        {group.teacherName || "담당"} 선생님 · 학생 {group.students.length}명
+                        {group.teacherName || "담당"} 선생님 · {mode === "festival" ? "제출" : "학생"} {group.students.length}명
                       </p>
                     </div>
                   </div>
@@ -245,22 +296,32 @@ export default function AdminDashboardView() {
                                   </div>
                                   <div>
                                     <span className="text-sm font-bold text-white">{student.name}</span>
-                                    <p className="mt-0.5 text-[11px] font-bold text-slate-500">
-                                      출석 {toPercent(attendanceCount)}% · 머릿돌 {toPercent(foundationCount)}% · 암송 {toPercent(kindergartenRecitationCount)}%
-                                    </p>
+                                    {mode === "kindergarten" ? (
+                                      <p className="mt-0.5 text-[11px] font-bold text-slate-500">
+                                        출석 {toPercent(attendanceCount)}% · 머릿돌 {toPercent(foundationCount)}% · 암송 {toPercent(kindergartenRecitationCount)}%
+                                      </p>
+                                    ) : (
+                                      <p className="mt-0.5 text-[11px] font-bold text-slate-500">
+                                        암송 {recitationScore}/{TOTAL_RECITATIONS} · 퀴즈 {quizScore}/{TOTAL_QUIZZES}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                  <span className="flex items-center gap-1 text-xs font-bold">
-                                    <BookOpen className="h-3.5 w-3.5 text-emerald-400" />
-                                    <span className="text-emerald-400">{recitationScore}</span>
-                                    <span className="text-slate-500">/{TOTAL_RECITATIONS}</span>
-                                  </span>
-                                  <span className="flex items-center gap-1 text-xs font-bold">
-                                    <HelpCircle className="h-3.5 w-3.5 text-sky-400" />
-                                    <span className="text-sky-400">{quizScore}</span>
-                                    <span className="text-slate-500">/{TOTAL_QUIZZES}</span>
-                                  </span>
+                                  {mode === "festival" && (
+                                    <>
+                                      <span className="flex items-center gap-1 text-xs font-bold">
+                                        <BookOpen className="h-3.5 w-3.5 text-emerald-400" />
+                                        <span className="text-emerald-400">{recitationScore}</span>
+                                        <span className="text-slate-500">/{TOTAL_RECITATIONS}</span>
+                                      </span>
+                                      <span className="flex items-center gap-1 text-xs font-bold">
+                                        <HelpCircle className="h-3.5 w-3.5 text-sky-400" />
+                                        <span className="text-sky-400">{quizScore}</span>
+                                        <span className="text-slate-500">/{TOTAL_QUIZZES}</span>
+                                      </span>
+                                    </>
+                                  )}
                                   {isStudentExpanded ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
                                 </div>
                               </button>
@@ -268,58 +329,66 @@ export default function AdminDashboardView() {
                               {/* 상세 과별 현황 */}
                               {isStudentExpanded && (
                                 <div className="border-t border-slate-700/50 px-3 pb-3 pt-2">
-                                  <p className="mb-2 text-xs font-bold text-amber-300">🌱 유치부 활동</p>
-                                  <div className="mb-4 grid grid-cols-3 gap-2">
-                                    {KINDERGARTEN_ACTIVITY_TYPES.map((activity) => {
-                                      const count = countKindergartenActivity(student, activity.key);
-                                      return (
-                                        <ActivityDonut
-                                          key={activity.key}
-                                          label={activity.label}
-                                          count={count}
-                                          total={TOTAL_KINDERGARTEN_LESSONS}
-                                          color={activity.color}
-                                        />
-                                      );
-                                    })}
-                                  </div>
+                                  {mode === "kindergarten" && (
+                                    <>
+                                      <p className="mb-2 text-xs font-bold text-amber-300">🌱 유치부 활동</p>
+                                      <div className="mb-4 grid grid-cols-3 gap-2">
+                                        {KINDERGARTEN_ACTIVITY_TYPES.map((activity) => {
+                                          const count = countKindergartenActivity(student, activity.key);
+                                          return (
+                                            <ActivityDonut
+                                              key={activity.key}
+                                              label={activity.label}
+                                              count={count}
+                                              total={TOTAL_KINDERGARTEN_LESSONS}
+                                              color={activity.color}
+                                            />
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
 
-                                  <p className="mb-2 text-xs font-bold text-emerald-400">📖 암송 (성공 {recitationScore}/{TOTAL_RECITATIONS})</p>
-                                  <div className="mb-3 grid grid-cols-8 gap-1">
-                                    {Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1).map((n) => {
-                                      const st = student.lessonStates[n];
-                                      return (
-                                        <div key={n} className={cn(
-                                          "flex h-8 items-center justify-center rounded-lg text-[11px] font-extrabold",
-                                          st === "success" ? "bg-emerald-500/30 text-emerald-300" : st === "fail" ? "bg-red-500/30 text-red-300" : "bg-slate-700 text-slate-500"
-                                        )}>
-                                          {n}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                  <p className="mb-2 text-xs font-bold text-sky-400">❓ 퀴즈 (정답 {quizScore}/{TOTAL_QUIZZES})</p>
-                                  <div className="grid grid-cols-8 gap-1">
-                                    {Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1).map((n) => {
-                                      const st = student.quizStates[n];
-                                      return (
-                                        <div key={n} className={cn(
-                                          "flex h-8 items-center justify-center rounded-lg text-[11px] font-extrabold",
-                                          st === "success" ? "bg-sky-500/30 text-sky-300" : st === "fail" ? "bg-red-500/30 text-red-300" : "bg-slate-700 text-slate-500"
-                                        )}>
-                                          {n}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUnlock(student)}
-                                    disabled={unlockingStudentId === student.studentId}
-                                    className="mt-3 h-10 w-full rounded-xl bg-amber-500/15 text-sm font-extrabold text-amber-300 ring-1 ring-amber-500/30 transition hover:bg-amber-500/25 active:scale-[0.99] disabled:opacity-60"
-                                  >
-                                    {unlockingStudentId === student.studentId ? "해제 중..." : "수정 허용"}
-                                  </button>
+                                  {mode === "festival" && (
+                                    <>
+                                      <p className="mb-2 text-xs font-bold text-emerald-400">📖 암송 (성공 {recitationScore}/{TOTAL_RECITATIONS})</p>
+                                      <div className="mb-3 grid grid-cols-8 gap-1">
+                                        {Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1).map((n) => {
+                                          const st = student.lessonStates[n];
+                                          return (
+                                            <div key={n} className={cn(
+                                              "flex h-8 items-center justify-center rounded-lg text-[11px] font-extrabold",
+                                              st === "success" ? "bg-emerald-500/30 text-emerald-300" : st === "fail" ? "bg-red-500/30 text-red-300" : "bg-slate-700 text-slate-500"
+                                            )}>
+                                              {n}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                      <p className="mb-2 text-xs font-bold text-sky-400">❓ 퀴즈 (정답 {quizScore}/{TOTAL_QUIZZES})</p>
+                                      <div className="grid grid-cols-8 gap-1">
+                                        {Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1).map((n) => {
+                                          const st = student.quizStates[n];
+                                          return (
+                                            <div key={n} className={cn(
+                                              "flex h-8 items-center justify-center rounded-lg text-[11px] font-extrabold",
+                                              st === "success" ? "bg-sky-500/30 text-sky-300" : st === "fail" ? "bg-red-500/30 text-red-300" : "bg-slate-700 text-slate-500"
+                                            )}>
+                                              {n}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUnlock(student)}
+                                        disabled={unlockingStudentId === student.studentId}
+                                        className="mt-3 h-10 w-full rounded-xl bg-amber-500/15 text-sm font-extrabold text-amber-300 ring-1 ring-amber-500/30 transition hover:bg-amber-500/25 active:scale-[0.99] disabled:opacity-60"
+                                      >
+                                        {unlockingStudentId === student.studentId ? "해제 중..." : "수정 허용"}
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               )}
                             </div>
