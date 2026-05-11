@@ -32,8 +32,10 @@ import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
 const TOTAL_RECITATIONS = 16;
 const TOTAL_QUIZZES = 18;
-const TOTAL_KINDERGARTEN_LESSONS = 12;
-const TOTAL_KINDERGARTEN_ACTIVITIES = 36;
+const TOTAL_KINDERGARTEN_LESSONS = 52;
+const TOTAL_KINDERGARTEN_ACTIVITIES = TOTAL_KINDERGARTEN_LESSONS * 3;
+const KINDERGARTEN_BASE_UNLOCK_LESSON = 19;
+const KINDERGARTEN_BASE_UNLOCK_DATE = new Date(2026, 4, 10);
 type ToggleState = "success" | "fail" | undefined;
 
 function nextToggleState(current: ToggleState): ToggleState {
@@ -47,6 +49,19 @@ function todayLabel() {
   const d = new Date();
   const days = ["일", "월", "화", "수", "목", "금", "토"];
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+}
+
+function getKindergartenAvailableLessonLimit(today = new Date()) {
+  const startOfDay = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const daysSinceBase = Math.floor(
+    (startOfDay(today) - startOfDay(KINDERGARTEN_BASE_UNLOCK_DATE)) / 86_400_000
+  );
+  const unlockedWeeks = Math.max(0, Math.floor(daysSinceBase / 7));
+  return Math.min(
+    TOTAL_KINDERGARTEN_LESSONS,
+    KINDERGARTEN_BASE_UNLOCK_LESSON + unlockedWeeks
+  );
 }
 
 type TeacherCheckViewProps = {
@@ -282,6 +297,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
 
   const handleToggleKindergartenActivity = async (lessonNum: number, activityType: string) => {
     if (!kindergartenModalStudent) return;
+    if (lessonNum > getKindergartenAvailableLessonLimit()) return;
     const studentId = kindergartenModalStudent.studentId;
     const activityKey = `${lessonNum}:${activityType}`;
     const nextState = kindergartenModalStudent.kindergartenActivityStates?.[activityKey] ? undefined : "success";
@@ -962,6 +978,7 @@ function StudentKindergartenModal({
     { length: selectedBook.end - selectedBook.start + 1 },
     (_, i) => selectedBook.start + i
   );
+  const availableLessonLimit = getKindergartenAvailableLessonLimit();
   React.useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -1052,6 +1069,7 @@ function StudentKindergartenModal({
 
         <div className="flex-1 space-y-3 overflow-y-auto px-5 pb-4">
           {selectedLessons.map((lesson) => {
+            const locked = lesson > availableLessonLimit;
             const selectedCount = KINDERGARTEN_ACTIVITIES.filter(
               (activity) => states[getKindergartenActivityKey(lesson, activity.key)] === "success"
             ).length;
@@ -1062,19 +1080,28 @@ function StudentKindergartenModal({
                 key={lesson}
                 className={cn(
                   "rounded-3xl bg-white p-4 shadow-soft ring-2 transition",
-                  complete ? "ring-pastel-greenDeep/70" : "ring-slate-100"
+                  locked
+                    ? "bg-slate-50 opacity-60 ring-slate-100"
+                    : complete
+                      ? "ring-pastel-greenDeep/70"
+                      : "ring-slate-100"
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-base font-extrabold text-slate-800">
+                    <h3 className={cn("text-base font-extrabold", locked ? "text-slate-400" : "text-slate-800")}>
                       {lesson}과: {LESSON_TITLES[lesson]}
                     </h3>
                     <p className="mt-1 text-xs font-bold text-slate-400">
-                      {selectedCount}/3 완료
+                      {locked ? `${availableLessonLimit + 1}과부터 순서대로 열려요` : `${selectedCount}/3 완료`}
                     </p>
                   </div>
-                  {complete && (
+                  {locked && (
+                    <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-extrabold text-slate-500">
+                      잠김
+                    </span>
+                  )}
+                  {complete && !locked && (
                     <span className="rounded-full bg-pastel-greenDeep px-3 py-1 text-xs font-extrabold text-white">
                       완료
                     </span>
@@ -1094,13 +1121,15 @@ function StudentKindergartenModal({
                         key={activity.key}
                         type="button"
                         onClick={() => onToggle(lesson, activity.key)}
+                        disabled={locked}
                         aria-pressed={selected}
                         className={cn(
                           "flex h-12 items-center justify-center rounded-2xl text-sm font-extrabold shadow-sm transition active:scale-95",
                           selected && activity.color === "yellow" && "bg-pastel-yellowDeep text-white",
                           selected && activity.color === "green" && "bg-pastel-greenDeep text-white",
                           selected && activity.color === "blue" && "bg-pastel-blueDeep text-white",
-                          !selected && "bg-white text-slate-600 ring-2 ring-slate-200"
+                          !selected && "bg-white text-slate-600 ring-2 ring-slate-200",
+                          locked && "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200 active:scale-100"
                         )}
                       >
                         {activity.label}
