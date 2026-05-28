@@ -106,8 +106,22 @@ public class RecitationService {
         }
 
         RecitationRecord record = existing.orElseGet(() -> {
-            Teacher t = teacherRepository.findById(teacherId)
-                    .orElseThrow(() -> new IllegalArgumentException("교사 없음: " + teacherId));
+            Teacher t = null;
+            if (teacherId != null && teacherId > 0) {
+                t = teacherRepository.findById(teacherId).orElse(null);
+            }
+            if (t == null) {
+                List<Teacher> teachers = teacherRepository.findByClassEntityIdOrderByNameAsc(student.getClassEntity().getId());
+                if (!teachers.isEmpty()) {
+                    t = teachers.get(0);
+                } else {
+                    t = teacherRepository.findAll().stream().findFirst().orElse(null);
+                }
+            }
+            if (t == null) {
+                throw new IllegalArgumentException("시스템에 등록된 교사가 없습니다. 교사를 먼저 등록해 주세요.");
+            }
+
             return RecitationRecord.builder()
                     .student(student)
                     .recordDate(date)

@@ -34,8 +34,8 @@ public class RecitationRecord {
     @Column(name = "lesson_number", nullable = false)
     private Integer lessonNumber;
 
-    @Column(nullable = false, length = 20)
-    private String type; // "RECITATION" or "QUIZ"
+    @Column(nullable = false, length = 50)
+    private String type; // "RECITATION", "QUIZ", or "KINDERGARTEN_*"
 
     @Column(nullable = false, length = 20)
     private String result; // "SUCCESS" or "FAIL"

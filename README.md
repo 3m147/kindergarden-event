@@ -9,13 +9,11 @@
 
 ## 📸 프로젝트 미리보기 (Preview)
 
-<!-- 스크린샷 파일명을 영문으로 정리한 뒤 아래 경로를 사용하면 GitHub에서 안정적으로 표시됩니다. -->
-<!--
 <p align="center">
-  <img src="./assets/start-page.png" alt="교사 시작 페이지" width="420" />
-  <img src="./assets/admin-dashboard.png" alt="관리자 대시보드" width="420" />
+  <img src="./assets/start-login.png" alt="교사 로그인 페이지" width="260" />
+  <img src="./assets/teacher-check-list.png" alt="교사 유치부 체크 화면" width="260" />
+  <img src="./assets/admin-dashboard.png" alt="관리자 대시보드" width="260" />
 </p>
--->
 
 ### 🎬 데모 영상
 
@@ -121,11 +119,9 @@ graph TD
 
 ### 1. 시작 페이지 (StartView)
 
-<!--
 <p align="center">
-  <img src="./assets/start-page.png" alt="교사 시작 페이지" width="780" />
+  <img src="./assets/start-login.png" alt="교사 로그인 페이지" width="360" />
 </p>
--->
 
 * **모바일 교사용 진입 화면**<br>
   - 오늘 날짜와 서비스명을 상단에 표시하고, 아이디/비밀번호 입력 후 교사 로그인을 수행합니다.<br>
@@ -138,6 +134,11 @@ graph TD
 
 ### 2. 유치부 체크 페이지 (TeacherCheckView)
 
+<p align="center">
+  <img src="./assets/teacher-check-list.png" alt="교사 유치부 체크 화면" width="360" />
+  <img src="./assets/teacher-activity-modal.png" alt="학생별 활동 체크 모달" width="360" />
+</p>
+
 * **학생별 활동 체크**<br>
   - 로그인한 교사의 `classId`를 이용해 담당 반 학생 목록을 불러옵니다.<br>
   - 학생별로 출석, 머릿돌, 암송 활동을 과별로 체크할 수 있습니다.<br>
@@ -149,11 +150,10 @@ graph TD
 
 ### 3. 관리자 대시보드 (AdminDashboardView)
 
-<!--
 <p align="center">
-  <img src="./assets/admin-dashboard.png" alt="관리자 대시보드" width="780" />
+  <img src="./assets/admin-dashboard.png" alt="관리자 대시보드" width="360" />
+  <img src="./assets/admin-detail.png" alt="관리자 학생 상세 현황" width="360" />
 </p>
--->
 
 * **전체 반 현황 관리**<br>
   - 관리자는 모든 반의 학생 체크 현황을 한 화면에서 확인할 수 있습니다.<br>
@@ -169,7 +169,17 @@ graph TD
   - 관리자는 교사와 학생 목록을 구분해 조회하고 프로필 이미지를 업로드할 수 있습니다.<br>
   - 백엔드의 multipart upload API를 통해 파일을 저장하고, DB에는 이미지 URL을 갱신합니다.<br><br>
 
-### 5. 백엔드 API 및 데이터 관리
+### 5. 관리자 로그인 페이지 (AdminLoginView)
+
+<p align="center">
+  <img src="./assets/admin-login.png" alt="관리자 로그인 페이지" width="360" />
+</p>
+
+* **관리자 전용 인증 화면**<br>
+  - 관리자 계정으로 로그인한 뒤 전체 반 현황, 프로필 관리, 공지사항 관리 화면으로 진입할 수 있습니다.<br>
+  - 교사용 화면과 분리된 어두운 톤의 UI를 적용해 일반 사용자 화면과 관리 영역을 시각적으로 구분했습니다.<br><br>
+
+### 6. 백엔드 API 및 데이터 관리
 
 * **JPA 기반 기록 관리**<br>
   - `ClassEntity`, `Teacher`, `Student`, `RecitationRecord`, `Admin` 엔티티를 중심으로 반-교사-학생-활동기록 관계를 구성했습니다.<br>

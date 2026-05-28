@@ -5,5 +5,6 @@
     "**/.DS_Store": true,
     "**/target": true,
     "**/.idea": true
-  }
+  },
+  "java.compile.nullAnalysis.mode": "automatic"
 }

@@ -171,6 +171,18 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
   const kindergartenDone = students.filter((s) => Object.keys(s.kindergartenActivityStates ?? {}).length === TOTAL_KINDERGARTEN_ACTIVITIES).length;
   const totalCount = students.length;
 
+  // 오늘 날짜(이번주 과)에 체크 완료했는지에 대한 오늘 기준 집계
+  const weeklyLesson = getKindergartenAvailableLessonLimit();
+  const attendanceTodayCount = students.filter(s =>
+    s.kindergartenActivityStates?.[`${weeklyLesson}:KINDERGARTEN_ATTENDANCE`] === "success"
+  ).length;
+  const foundationTodayCount = students.filter(s =>
+    s.kindergartenActivityStates?.[`${weeklyLesson}:KINDERGARTEN_FOUNDATION`] === "success"
+  ).length;
+  const recitationTodayCount = students.filter(s =>
+    s.kindergartenActivityStates?.[`${weeklyLesson}:KINDERGARTEN_RECITATION`] === "success"
+  ).length;
+
   // 학생 프로필 탭: 상단 프로필 동기화 + 액션 시트 오픈
   const handleSelect = (student: StudentRecitationDto) => {
     setActiveStudentId(student.studentId);
@@ -470,13 +482,27 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
         aria-label="진행률 영역"
       >
         {mode === "kindergarten" ? (
-          <div className="mb-2">
+          <div className="mb-2 grid grid-cols-3 gap-2">
             <ProgressBar
-              icon={<BookOpen className="h-4 w-4" />}
-              label="유치부 체크"
-              done={kindergartenDone}
+              icon={<Sun className="h-3.5 w-3.5" />}
+              label="출석"
+              done={attendanceTodayCount}
+              total={totalCount}
+              color="yellow"
+            />
+            <ProgressBar
+              icon={<Crown className="h-3.5 w-3.5" />}
+              label="머릿돌"
+              done={foundationTodayCount}
               total={totalCount}
               color="green"
+            />
+            <ProgressBar
+              icon={<BookOpen className="h-3.5 w-3.5" />}
+              label="암송"
+              done={recitationTodayCount}
+              total={totalCount}
+              color="blue"
             />
           </div>
         ) : (
@@ -1146,7 +1172,7 @@ function StudentKindergartenModal({
                   </div>
                   {locked && (
                     <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-extrabold text-slate-500">
-                      잠김
+                      오늘 공과가 아닙니다
                     </span>
                   )}
                   {complete && !locked && (
@@ -1500,17 +1526,29 @@ function ProgressBar({
   label: string;
   done: number;
   total: number;
-  color: "green" | "blue";
+  color: "green" | "blue" | "yellow";
 }) {
   const pct = total === 0 ? 0 : Math.round((done / total) * 100);
   const isFull = total > 0 && done === total;
-  // 색상 클래스를 두 가지만 분기 — 디자인 톤 통일
+  // 색상 클래스를 세 가지로 분기 — 디자인 톤 통일
   const fill =
     color === "green"
       ? "bg-gradient-to-r from-pastel-greenDeep to-emerald-400"
-      : "bg-gradient-to-r from-pastel-blueDeep to-sky-400";
-  const tint = color === "green" ? "text-pastel-greenDeep" : "text-pastel-blueDeep";
-  const bg = color === "green" ? "bg-pastel-green/40" : "bg-pastel-blue/40";
+      : color === "blue"
+        ? "bg-gradient-to-r from-pastel-blueDeep to-sky-400"
+        : "bg-gradient-to-r from-pastel-yellowDeep to-amber-400";
+  const tint =
+    color === "green"
+      ? "text-pastel-greenDeep"
+      : color === "blue"
+        ? "text-pastel-blueDeep"
+        : "text-pastel-yellowDeep";
+  const bg =
+    color === "green"
+      ? "bg-pastel-green/40"
+      : color === "blue"
+        ? "bg-pastel-blue/40"
+        : "bg-pastel-yellow/40";
 
   return (
     <div className={cn("relative flex flex-col gap-1 overflow-hidden rounded-2xl px-3 py-2", bg)}>
