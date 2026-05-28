@@ -1,237 +1,237 @@
-# 동탄교회 유치부 체크 시스템
-## Kindergarten Attendance & Recitation Management System
+# ⛪ 동탄교회 유치부 체크 시스템
 
-**동탄교회 유치부 체크 시스템**은 유치부 교사가 모바일 환경에서 학생별 출석, 머릿돌, 암송 활동을 빠르게 체크하고, 관리자가 전체 반의 진행 현황과 프로필을 관리할 수 있는 교회학교 운영 보조 웹 애플리케이션입니다.
-
-교사는 로그인 후 담당 반으로 바로 진입하여 학생별 활동 상태를 기록하고, 관리자는 반별 현황, 학생별 상세 기록, 프로필 이미지, 공지사항을 관리할 수 있습니다.
-
----
-
-<!-- 프로젝트 스크린샷을 추가할 경우 아래 경로에 이미지를 배치해 사용하세요. -->
-<!-- <img src="images/main.png" alt="동탄교회 유치부 체크 시스템" width="100%"/> -->
+<div align="center">
+  <h2>Kindergarten Check System (교사용 유치부 출석·공과·암송 관리 시스템)</h2>
+  <p><strong>동탄교회 유치부 체크 시스템</strong>은 교사가 모바일 환경에서 학생별 출석, 머릿돌, 암송 활동을 빠르게 기록하고 관리자가 전체 반의 진행 현황과 프로필, 공지사항을 관리할 수 있는 풀스택 웹 애플리케이션입니다.</p>
+</div>
 
 ---
 
-<h2>프로젝트 기능 개요(기여도: 상: ⭐ / 중: ★ / 하: ☆)</h2>
+## 📸 프로젝트 미리보기 (Preview)
+
+<!-- 스크린샷 파일명을 영문으로 정리한 뒤 아래 경로를 사용하면 GitHub에서 안정적으로 표시됩니다. -->
+<!--
+<p align="center">
+  <img src="./assets/start-page.png" alt="교사 시작 페이지" width="420" />
+  <img src="./assets/admin-dashboard.png" alt="관리자 대시보드" width="420" />
+</p>
+-->
+
+### 🎬 데모 영상
+
+- [이번 주 공과 영상](https://www.youtube.com/watch?v=DNobgocypGg)
+
+---
+
+## 👥 사용자 역할 및 주요 화면 (User Registry)
+
+본 프로젝트는 **교사와 관리자 역할을 분리**하여, 실제 유치부 운영 흐름에 맞는 모바일 중심 화면과 관리자용 현황 관리 화면을 제공합니다.
+
+| 사용자 | 담당 화면 | 주요 기능 | 특징 |
+|--------|-----------|-----------|------|
+| **교사** | **StartView / TeacherCheckView** | 로그인, 담당 반 진입, 학생별 출석·머릿돌·암송 체크 | 모바일 터치 환경 최적화 |
+| **보조교사** | **StartView / TeacherCheckView** | 교사 기능 + 보조교사용 안내 영상 조건부 표시 | `role === "부교사"` 기반 UI 분기 |
+| **관리자** | **AdminDashboardView / AdminProfileManager** | 전체 반 현황 조회, 제출 잠금 해제, 프로필 관리, 공지사항 관리 | 반별/학생별 데이터 통합 관리 |
+
+---
+
+## 🌟 주요 기능 (기여도: 상: ⭐ / 중: ★ / 하: ☆)
+
+*교사용 모바일 UI, 관리자 대시보드, Spring Boot REST API, JPA 기반 데이터 처리, MySQL 연동을 직접 구현했습니다.*
+
+### ✅ 개발 완료
 
 | 기능명 | 설명 | 기여도 |
 |--------|------|--------|
-| **교사 로그인 및 담당 반 진입** | 교사 계정 인증 후 담당 반 체크 화면으로 이동 | 상 ⭐ |
-| **유치부 활동 체크** | 학생별 출석, 머릿돌, 암송 활동을 과별로 체크 및 저장 | 상 ⭐ |
-| **학생별 체크 현황 조회** | 반별 학생 목록과 활동 완료 상태를 모바일 UI로 제공 | 상 ⭐ |
-| **관리자 대시보드** | 전체 반 학생들의 유치부 체크 및 암송잔치 현황 조회 | 상 ⭐ |
-| **학생 제출 및 잠금 해제** | 최종 제출된 학생 기록을 관리자가 수정 가능 상태로 해제 | 중 ★ |
-| **프로필 이미지 관리** | 관리자 페이지에서 교사/학생 프로필 이미지 업로드 및 변경 | 중 ★ |
-| **공지사항 관리** | 관리자가 공지 글을 등록하고 선생님 화면에 팝업으로 전달 | 중 ★ |
-| **역할 기반 안내 영상** | 교사 역할에 따라 공통 영상 및 보조교사용 영상을 조건부 표시 | 중 ★ |
-| **암송잔치 기록 기능** | 암송/퀴즈 성공 여부를 기록하고 관리자 화면에서 제출 현황 확인 | 중 ★ |
+| **교사 로그인 및 담당 반 자동 진입** | 교사 계정 인증 후 담당 반 ID를 기반으로 유치부 체크 화면 연결 | 상 ⭐ |
+| **유치부 활동 체크** | 학생별 출석, 머릿돌, 암송 상태를 과별로 체크하고 서버에 저장 | 상 ⭐ |
+| **관리자 통합 대시보드** | 전체 반의 학생별 활동 현황과 진행률을 반별 아코디언 UI로 조회 | 상 ⭐ |
+| **학생 기록 제출 및 잠금 해제** | 최종 제출된 학생 기록을 관리자 권한으로 수정 가능 상태로 변경 | 중 ★ |
+| **프로필 이미지 관리** | 교사/학생 프로필 이미지 업로드, 저장, 미리보기 기능 구현 | 중 ★ |
+| **공지사항 팝업 시스템** | 관리자가 등록한 공지를 선생님 시작 화면 팝업으로 표시 | 중 ★ |
+| **역할 기반 영상 표시** | 모든 교사용 공통 영상과 보조교사용 조건부 영상 슬롯 구현 | 중 ★ |
+| **암송잔치 기록 구조 유지** | 암송/퀴즈 성공 여부 기록 및 관리자 제출 현황 조회 기능 유지 | 중 ★ |
+| **모바일 UI 최적화** | 큰 터치 영역, 안전 영역, 모바일 브라우저 높이 대응을 고려한 화면 설계 | 상 ⭐ |
+
+### ⏳ 개발 예정
+
+| 기능명 | 설명 |
+|--------|------|
+| **공지사항 DB 저장** | 현재 localStorage 기반 공지를 백엔드 DB/API 기반으로 전환 |
+| **JWT 인증 시스템** | localStorage 기반 간이 로그인 상태를 토큰 기반 인증 구조로 개선 |
+| **관리자 영상 링크 관리** | 관리자 페이지에서 공과/보조교사용 영상 URL을 직접 변경 |
+| **배포 자동화** | Oracle Cloud VM 또는 PaaS 기반 백엔드/DB 배포 및 CI/CD 구성 |
+| **운영 통계 화면** | 반별/월별 출석률, 암송률, 활동 완료율 차트 제공 |
 
 ---
 
-<h2>기술 스택</h2>
+## 🛠 사용 기술 스택
 
-### Frontend
+### - 🎨 Frontend
 
-- **Next.js 14**
-- **React 18**
-- **TypeScript**
-- **Tailwind CSS**
-- **lucide-react**
-- **Radix UI Select**
+<img src="https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black" height="25" /> <img src="https://img.shields.io/badge/Next.js-000000?style=flat&logo=nextdotjs&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat&logo=tailwindcss&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/Radix_UI-161618?style=flat&logo=radixui&logoColor=white" height="25" />
 
-<p align="left">
-  <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white"/>
-  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Tailwind CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Radix UI-161618?style=for-the-badge&logo=radixui&logoColor=white"/>
+### - 🔧 Backend
+
+<img src="https://img.shields.io/badge/Java_17-007396?style=flat&logo=openjdk&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/Spring_Boot_3.3-6DB33F?style=flat&logo=springboot&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/Spring_Data_JPA-59666C?style=flat&logo=hibernate&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/Spring_Security-6DB33F?style=flat&logo=springsecurity&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/REST_API-000000?style=flat&logo=fastapi&logoColor=white" height="25" />
+
+### - 🗄 Database
+
+<img src="https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/DBeaver-372923?style=flat&logo=dbeaver&logoColor=white" height="25" />
+
+### - ☁️ 실행 환경 (Infra) & 배포 (Deployment)
+
+<img src="https://img.shields.io/badge/Maven-C71A36?style=flat&logo=apachemaven&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/Oracle_Cloud-F80000?style=flat&logo=oracle&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white" height="25" /> <img src="https://img.shields.io/badge/Git-F05032?style=flat&logo=git&logoColor=white" height="25" />
+
+---
+
+## 🏗️ 시스템 아키텍처 (System Architecture)
+
+```mermaid
+graph TD
+    subgraph Frontend [Next.js App Router]
+        A[StartView 교사 로그인] --> B[TeacherCheckView 유치부 체크]
+        C[AdminLoginView 관리자 로그인] --> D[AdminDashboardView 관리자 대시보드]
+        D --> E[AdminProfileManager 프로필 관리]
+        D --> F[LocalStorage Notice Store]
+        F --> A
+        A --> G[YouTube iframe 안내 영상]
+    end
+
+    subgraph Backend [Spring Boot REST API]
+        H[AuthController] --> I[AuthService]
+        J[RecitationController] --> K[RecitationService]
+        L[ProfileController] --> M[Upload Handler]
+        I --> N[(MySQL)]
+        K --> N
+        M --> N
+        M --> O[/uploads File Storage/]
+    end
+
+    B -->|GET/PUT/POST recitation API| J
+    D -->|admin scores/profiles API| J
+    E -->|multipart upload| L
+    A -->|login API| H
+    C -->|admin login API| H
+```
+
+---
+
+## 주요 화면 설명
+
+### 1. 시작 페이지 (StartView)
+
+<!--
+<p align="center">
+  <img src="./assets/start-page.png" alt="교사 시작 페이지" width="780" />
 </p>
+-->
 
-### Backend
+* **모바일 교사용 진입 화면**<br>
+  - 오늘 날짜와 서비스명을 상단에 표시하고, 아이디/비밀번호 입력 후 교사 로그인을 수행합니다.<br>
+  - 로그인 성공 시 교사 이름, 역할, 담당 반, 프로필 이미지를 상태와 `localStorage`에 저장하여 새로고침 후에도 로그인 상태를 유지합니다.<br>
+  - 운영용 UI에 맞춰 로그인 전 화면에서는 핵심 행동인 로그인 폼을 우선 배치하고, 안내 영상은 로그인 후 화면으로 이동시켰습니다.<br><br>
 
-- **Spring Boot 3.3**
-- **Java 17**
-- **Spring Data JPA**
-- **Spring Security Crypto**
-- **MySQL**
-- **REST API**
+* **역할 기반 콘텐츠 표시**<br>
+  - 모든 교사에게 공통 공과 영상을 표시합니다.<br>
+  - 보조교사(`부교사`)에게만 보조교사용 영상 슬롯을 조건부 렌더링할 수 있도록 구현했습니다.<br><br>
 
-<p align="left">
-  <img src="https://img.shields.io/badge/Spring Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Java 17-007396?style=for-the-badge&logo=openjdk&logoColor=white"/>
-  <img src="https://img.shields.io/badge/JPA-59666C?style=for-the-badge&logo=hibernate&logoColor=white"/>
-  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white"/>
-  <img src="https://img.shields.io/badge/REST API-000000?style=for-the-badge&logo=fastapi&logoColor=white"/>
+### 2. 유치부 체크 페이지 (TeacherCheckView)
+
+* **학생별 활동 체크**<br>
+  - 로그인한 교사의 `classId`를 이용해 담당 반 학생 목록을 불러옵니다.<br>
+  - 학생별로 출석, 머릿돌, 암송 활동을 과별로 체크할 수 있습니다.<br>
+  - 체크 버튼은 모바일 터치 환경을 고려해 크게 구성했고, 상태 변경 시 API를 통해 즉시 저장합니다.<br><br>
+
+* **제출 흐름 관리**<br>
+  - 학생별 체크 결과를 최종 제출하여 관리자 화면에 반영할 수 있습니다.<br>
+  - 제출 이후에는 관리자 권한으로 잠금을 해제해야 수정할 수 있도록 서버 로직을 분리했습니다.<br><br>
+
+### 3. 관리자 대시보드 (AdminDashboardView)
+
+<!--
+<p align="center">
+  <img src="./assets/admin-dashboard.png" alt="관리자 대시보드" width="780" />
 </p>
+-->
 
-### Tools & Environment
+* **전체 반 현황 관리**<br>
+  - 관리자는 모든 반의 학생 체크 현황을 한 화면에서 확인할 수 있습니다.<br>
+  - 반별 아코디언과 학생별 상세 영역을 통해 출석, 머릿돌, 암송 진행률을 빠르게 파악합니다.<br><br>
 
-- **Maven**
-- **DBeaver**
-- **Oracle Cloud / VM 배포 가능 구조**
-- **Git**
-- **YouTube iframe embed**
-- **LocalStorage**
+* **공지사항 관리**<br>
+  - 공지 글을 추가/삭제할 수 있으며, 공지 버튼이 활성화된 글만 선생님 화면 팝업으로 표시됩니다.<br>
+  - 현재는 프론트 `localStorage` 기반으로 동작하며, 추후 DB/API 기반으로 확장하기 쉬운 구조로 `notices.ts`에 공통 로직을 분리했습니다.<br><br>
 
----
+### 4. 프로필 관리 페이지 (AdminProfileManager)
 
-<h2>핵심 세부 기능 설명</h2>
+* **교사/학생 이미지 관리**<br>
+  - 관리자는 교사와 학생 목록을 구분해 조회하고 프로필 이미지를 업로드할 수 있습니다.<br>
+  - 백엔드의 multipart upload API를 통해 파일을 저장하고, DB에는 이미지 URL을 갱신합니다.<br><br>
 
-### 교사 로그인 및 시작 화면
+### 5. 백엔드 API 및 데이터 관리
 
-- 교사는 아이디와 비밀번호로 로그인합니다.
-- 로그인 성공 시 교사 이름, 역할, 담당 반, 프로필 이미지를 저장합니다.
-- `localStorage`에 교사 정보를 저장해 새로고침 후에도 로그인 상태를 유지합니다.
-- 로그인 후 담당 반의 유치부 체크 화면으로 바로 이동할 수 있습니다.
-
-### 유치부 체크 기능
-
-- 학생별로 다음 활동을 체크할 수 있습니다.
-  - 출석
-  - 머릿돌
-  - 암송
-- 1년 과정 기준 과별 체크 UI를 제공합니다.
-- 활동 상태는 서버 API를 통해 저장됩니다.
-- 체크 결과는 관리자 대시보드에서 전체 반 기준으로 조회할 수 있습니다.
-
-### 관리자 대시보드
-
-- 전체 반의 학생 현황을 반별 아코디언 형태로 확인합니다.
-- 학생별 활동 진행률과 상세 체크 상태를 조회합니다.
-- 유치부 체크 현황과 암송잔치 현황을 탭으로 구분합니다.
-- 최종 제출된 학생 기록은 관리자가 수정 허용 상태로 되돌릴 수 있습니다.
-
-### 프로필 이미지 관리
-
-- 관리자는 교사와 학생 프로필 이미지를 업로드할 수 있습니다.
-- 업로드된 이미지는 백엔드 서버의 `/uploads` 경로로 제공됩니다.
-- DB에는 이미지 URL이 저장되어 프론트에서 렌더링됩니다.
-
-### 공지사항 팝업
-
-- 관리자는 공지사항 탭에서 글을 추가하거나 삭제할 수 있습니다.
-- 공지 버튼이 활성화된 상태로 등록한 글은 선생님 시작 화면에 팝업으로 표시됩니다.
-- 공지 데이터는 현재 프론트의 `localStorage` 기반으로 관리되며, 추후 DB/API 기반으로 확장할 수 있습니다.
-
-### 역할 기반 안내 영상
-
-- 모든 교사에게 공통 안내 영상을 제공합니다.
-- 보조교사(`부교사`)에게만 별도 영상을 보여줄 수 있도록 조건부 렌더링 구조를 구현했습니다.
+* **JPA 기반 기록 관리**<br>
+  - `ClassEntity`, `Teacher`, `Student`, `RecitationRecord`, `Admin` 엔티티를 중심으로 반-교사-학생-활동기록 관계를 구성했습니다.<br>
+  - `RecitationRecord`에는 날짜, 과 번호, 타입, 성공 여부, 제출 여부를 저장하여 일자별 기록 조회와 제출 잠금 처리를 지원합니다.<br><br>
 
 ---
 
-## 전체 보기(자세히)
-
-<details>
-  <summary>교사 시작 화면</summary>
-
-  ### 로그인 화면
-  - 오늘 날짜와 서비스명을 표시합니다.
-  - 아이디/비밀번호 입력 후 로그인합니다.
-  - 모바일 터치 환경에 맞춰 입력창과 버튼 높이를 크게 구성했습니다.
-
-  <!-- <img src="images/start/login.png" alt="교사 로그인 화면" width="100%"/> -->
-
-  ### 로그인 후 선택 화면
-  - 교사 프로필, 이름, 역할, 담당 반을 표시합니다.
-  - 유치부 체크 화면으로 이동할 수 있습니다.
-  - 안내 영상을 확인할 수 있습니다.
-
-  <!-- <img src="images/start/teacher-home.png" alt="교사 선택 화면" width="100%"/> -->
-</details>
-
-<details>
-  <summary>유치부 체크 화면</summary>
-
-  ### 학생 목록
-  - 담당 반 학생 목록을 표시합니다.
-  - 학생 프로필 이미지와 체크 진행률을 확인할 수 있습니다.
-
-  ### 활동 체크
-  - 과별로 출석, 머릿돌, 암송 활동을 체크합니다.
-  - 체크 상태는 서버에 즉시 저장됩니다.
-
-  <!-- <img src="images/check/student-list.png" alt="학생 목록" width="100%"/> -->
-  <!-- <img src="images/check/activity-check.png" alt="활동 체크" width="100%"/> -->
-</details>
-
-<details>
-  <summary>관리자 대시보드</summary>
-
-  ### 반별 현황
-  - 전체 반의 학생 활동 현황을 조회합니다.
-  - 반별/학생별 아코디언 UI로 상세 상태를 확인합니다.
-
-  ### 공지사항 관리
-  - 공지 글을 추가/삭제합니다.
-  - 선생님 팝업 표시 여부를 공지 버튼 상태로 관리합니다.
-
-  <!-- <img src="images/admin/dashboard.png" alt="관리자 대시보드" width="100%"/> -->
-  <!-- <img src="images/admin/notices.png" alt="공지사항 관리" width="100%"/> -->
-</details>
-
-<details>
-  <summary>프로필 관리</summary>
-
-  ### 교사/학생 프로필
-  - 관리자 페이지에서 교사와 학생을 구분해 조회합니다.
-  - 프로필 이미지를 업로드하고 저장합니다.
-
-  <!-- <img src="images/admin/profiles.png" alt="프로필 관리" width="100%"/> -->
-</details>
-
----
-
-<h2>테이블 명세서 및 ERD</h2>
+## 🧬 테이블 명세서 및 ERD
 
 ### Entity-Relationship Diagram
 
 ```mermaid
 erDiagram
-  CLASS ||--o{ TEACHER : has
-  CLASS ||--o{ STUDENT : has
-  STUDENT ||--o{ RECITATION_RECORD : records
-  TEACHER ||--o{ RECITATION_RECORD : writes
-  ADMIN {
-    bigint admin_id PK
-    string login_id
-    string password
-    string name
-    datetime created_at
-  }
-  CLASS {
-    bigint class_id PK
-    string class_name
-    datetime created_at
-  }
-  TEACHER {
-    bigint teacher_id PK
-    string login_id
-    string password
-    string name
-    string role
-    text photo_url
-    bigint class_id FK
-    datetime created_at
-  }
-  STUDENT {
-    bigint student_id PK
-    string name
-    string photo_url
-    bigint class_id FK
-    datetime created_at
-  }
-  RECITATION_RECORD {
-    bigint record_id PK
-    bigint student_id FK
-    date record_date
-    int lesson_number
-    string type
-    string result
-    boolean submitted
-    bigint teacher_id FK
-    datetime updated_at
-  }
+    CLASS ||--o{ TEACHER : has
+    CLASS ||--o{ STUDENT : has
+    STUDENT ||--o{ RECITATION_RECORD : records
+    TEACHER ||--o{ RECITATION_RECORD : writes
+
+    ADMIN {
+        bigint admin_id PK
+        string login_id
+        string password
+        string name
+        datetime created_at
+    }
+
+    CLASS {
+        bigint class_id PK
+        string class_name
+        datetime created_at
+    }
+
+    TEACHER {
+        bigint teacher_id PK
+        string login_id
+        string password
+        string name
+        string role
+        text photo_url
+        bigint class_id FK
+        datetime created_at
+    }
+
+    STUDENT {
+        bigint student_id PK
+        string name
+        string photo_url
+        bigint class_id FK
+        datetime created_at
+    }
+
+    RECITATION_RECORD {
+        bigint record_id PK
+        bigint student_id FK
+        date record_date
+        int lesson_number
+        string type
+        string result
+        boolean submitted
+        bigint teacher_id FK
+        datetime updated_at
+    }
 ```
 
 <details>
@@ -240,7 +240,7 @@ erDiagram
   ### admin
   | 컬럼 | 설명 |
   |------|------|
-  | admin_id | 관리자 ID |
+  | admin_id | 관리자 PK |
   | login_id | 관리자 로그인 ID |
   | password | BCrypt 암호화 비밀번호 |
   | name | 관리자 이름 |
@@ -249,63 +249,48 @@ erDiagram
   ### class
   | 컬럼 | 설명 |
   |------|------|
-  | class_id | 반 ID |
+  | class_id | 반 PK |
   | class_name | 반 이름 |
   | created_at | 생성일 |
 
   ### teacher
   | 컬럼 | 설명 |
   |------|------|
-  | teacher_id | 교사 ID |
+  | teacher_id | 교사 PK |
   | login_id | 교사 로그인 ID |
   | password | BCrypt 암호화 비밀번호 |
   | name | 교사 이름 |
-  | role | 정교사/부교사 |
-  | photo_url | 프로필 이미지 URL |
-  | class_id | 담당 반 ID |
+  | role | 정교사 / 부교사 |
+  | photo_url | 교사 프로필 이미지 URL |
+  | class_id | 담당 반 FK |
   | created_at | 생성일 |
 
   ### student
   | 컬럼 | 설명 |
   |------|------|
-  | student_id | 학생 ID |
+  | student_id | 학생 PK |
   | name | 학생 이름 |
-  | photo_url | 프로필 이미지 URL |
-  | class_id | 소속 반 ID |
+  | photo_url | 학생 프로필 이미지 URL |
+  | class_id | 소속 반 FK |
   | created_at | 생성일 |
 
   ### recitation_record
   | 컬럼 | 설명 |
   |------|------|
-  | record_id | 기록 ID |
-  | student_id | 학생 ID |
+  | record_id | 기록 PK |
+  | student_id | 학생 FK |
   | record_date | 기록 날짜 |
   | lesson_number | 과 번호 |
-  | type | RECITATION, QUIZ, KINDERGARTEN_* |
-  | result | SUCCESS 또는 FAIL |
+  | type | RECITATION, QUIZ, KINDERGARTEN_ATTENDANCE 등 |
+  | result | SUCCESS / FAIL |
   | submitted | 최종 제출 여부 |
-  | teacher_id | 기록 교사 ID |
+  | teacher_id | 기록 교사 FK |
   | updated_at | 수정일 |
 </details>
 
 ---
 
-## 시스템 구조도
-
-```mermaid
-flowchart LR
-  Teacher[교사 모바일 브라우저] --> Frontend[Next.js Frontend]
-  Admin[관리자 브라우저] --> Frontend
-  Frontend --> API[Spring Boot REST API]
-  API --> DB[(MySQL)]
-  API --> Uploads[Profile Upload Directory]
-  Frontend --> LocalStorage[(LocalStorage Notices)]
-  Frontend --> YouTube[YouTube Embed]
-```
-
----
-
-## API 요약
+## 🔌 API 요약
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
@@ -322,19 +307,13 @@ flowchart LR
 
 ---
 
-## 프로젝트 실행 방법
+## 🚀 실행 방법
 
 ### Backend
 
 ```bash
 cd backend
 mvn spring-boot:run
-```
-
-기본 백엔드 주소:
-
-```text
-http://localhost:8080
 ```
 
 ### Frontend
@@ -345,13 +324,14 @@ npm install
 npm run dev
 ```
 
-기본 프론트 주소:
+### Local URL
 
 ```text
-http://localhost:3000
+Frontend: http://localhost:3000
+Backend:  http://localhost:8080
 ```
 
-### 환경 변수
+### Environment
 
 Frontend:
 
@@ -372,35 +352,47 @@ FILE_UPLOAD_DIR=uploads
 
 ---
 
-## 담당 개발 내용
+## 💡 프로젝트 핵심 인사이트 & 배운 점 (Junior Developer View)
 
-- 교사 로그인 및 로그인 상태 유지 구현
-- 교사 담당 반 기반 체크 화면 이동 구현
-- 유치부 체크 UI 및 서버 저장 연동
-- 관리자 대시보드 UI 구현
+* **모바일 운영 환경을 고려한 UI 우선순위 설계**:
+  처음에는 로그인 전 화면에 안내 영상을 배치했지만, 실제 운영에서는 교사가 가장 자주 수행하는 행동이 로그인과 체크 화면 진입이라는 점을 고려해 영상을 로그인 이후 화면으로 이동했습니다. 이를 통해 기능을 많이 보여주는 것보다 사용자 흐름에 맞는 정보 우선순위가 더 중요하다는 점을 배웠습니다.
+
+* **역할 기반 조건부 렌더링 구조 설계**:
+  교사와 보조교사의 역할이 다르다는 요구사항을 반영하기 위해 `role` 값을 기준으로 보조교사용 영상 슬롯을 조건부 표시했습니다. 단순한 UI 분기지만, 실제 운영자의 역할에 따라 다른 콘텐츠를 제공하는 구조를 설계해볼 수 있었습니다.
+
+* **Next.js와 Spring Boot 분리형 풀스택 연동 경험**:
+  프론트엔드와 백엔드를 독립적으로 실행하면서 CORS, API Base URL, 업로드 파일 공개 URL 등 분리 배포 환경에서 필요한 설정을 직접 다뤘습니다. 특히 개발 서버 포트가 바뀌었을 때 CORS 허용 Origin을 추가해야 한다는 점을 경험했습니다.
+
+* **JPA 엔티티 관계 모델링 경험**:
+  반, 교사, 학생, 활동 기록 사이의 관계를 JPA 엔티티로 매핑하고, 학생별/날짜별/과별 기록을 유니크하게 저장하도록 설계했습니다. 이를 통해 단순 체크 UI 뒤에도 데이터 정합성을 유지하는 테이블 설계가 중요하다는 점을 배웠습니다.
+
+* **관리자와 교사 화면 간 데이터 흐름 분리**:
+  관리자 공지사항과 선생님 팝업 기능을 구현하면서 공통 데이터 접근 로직을 `frontend/lib/notices.ts`로 분리했습니다. 작은 기능이라도 읽기/쓰기 책임을 분리하면 유지보수와 확장이 쉬워진다는 점을 체감했습니다.
+
+* **파일 업로드와 정적 리소스 제공 처리**:
+  프로필 이미지를 multipart로 업로드하고, 백엔드 서버의 `/uploads` 경로를 통해 정적 파일로 제공하는 흐름을 구현했습니다. DB에는 파일 자체가 아닌 URL을 저장하는 방식을 사용해 프론트 렌더링과 서버 저장 책임을 분리했습니다.
+
+---
+
+## 📌 담당 개발 내용
+
+- 교사 로그인 화면 및 로그인 상태 유지 구현
+- 담당 반 기반 유치부 체크 화면 이동 구현
+- 학생별 출석, 머릿돌, 암송 체크 UI 및 API 연동
+- 관리자 대시보드 반별/학생별 현황 UI 구현
 - 관리자 공지사항 등록/삭제 및 선생님 팝업 연동
-- 프로필 이미지 업로드 UI 및 백엔드 API 연동
-- Spring Boot REST API 설계 및 JPA 기반 데이터 처리
-- MySQL 테이블 설계 및 엔티티 매핑
-- 모바일 중심 UI/UX 개선
+- 프로필 이미지 업로드 UI 및 백엔드 multipart API 연동
+- Spring Boot REST API 및 JPA 기반 서비스 로직 구현
+- MySQL 엔티티 관계 설계 및 기록 저장 구조 구성
+- 모바일 중심 UI/UX 개선 및 운영 흐름 정리
 
 ---
 
-## 배운 점
+## 🔮 향후 개선 사항
 
-- 모바일 환경에서는 버튼 높이, 입력창 크기, 여백, 스크롤 구조가 실제 사용성에 큰 영향을 준다는 점을 경험했습니다.
-- 관리자와 교사 화면처럼 역할이 다른 사용자가 같은 데이터를 바라볼 때 공통 데이터 접근 함수를 분리하는 것이 유지보수에 유리하다는 점을 배웠습니다.
-- JPA 엔티티 관계를 설계하면서 반, 교사, 학생, 기록 데이터의 관계를 명확히 모델링하는 경험을 했습니다.
-- Spring Boot와 Next.js를 분리해 구성하면서 CORS, API base URL, 업로드 파일 경로 같은 배포 환경 설정의 중요성을 이해했습니다.
-- 실제 운영 흐름에서는 기능을 많이 보여주는 것보다 사용자가 가장 자주 수행하는 행동을 화면 상단에 배치하는 것이 더 중요하다는 점을 배웠습니다.
-
----
-
-## 향후 개선 사항
-
-- 공지사항을 `localStorage`가 아닌 DB 기반 API로 전환
-- 관리자 공지에 영상 링크 첨부 기능 추가
-- JWT 기반 인증 도입
-- HTTPS 및 운영 도메인 연결
-- Oracle Cloud VM 또는 별도 PaaS를 통한 백엔드/DB 배포
-- 테스트 코드 추가 및 CI/CD 구성
+- 공지사항 DB 저장 및 관리자 API 전환
+- JWT 기반 인증 및 권한 관리 도입
+- 관리자 페이지에서 공과 영상/보조교사용 영상 링크 관리
+- 반별/월별 출석률 및 활동 완료율 통계 차트 추가
+- Oracle Cloud VM 또는 PaaS 기반 백엔드/DB 배포
+- 프론트엔드/백엔드 테스트 코드 및 CI/CD 구성
