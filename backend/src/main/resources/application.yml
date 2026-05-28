@@ -35,5 +35,5 @@ app:
   # Railway 운영 시: APP_PUBLIC_URL=https://xxx.up.railway.app
   public-url: ${APP_PUBLIC_URL:http://localhost:8080}
   # CORS 허용 오리진 (콤마 구분). 운영 시 Vercel 도메인 추가.
-  # 예: APP_ALLOWED_ORIGINS=https://my-app.vercel.app,http://localhost:3000
-  allowed-origins: ${APP_ALLOWED_ORIGINS:http://localhost:3000}
+  # 예: APP_ALLOWED_ORIGINS=https://my-app.vercel.app,http://localhost:3000,http://localhost:3001
+  allowed-origins: ${APP_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}

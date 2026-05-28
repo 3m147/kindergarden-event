@@ -13,8 +13,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { ClipboardCheck, Eye, EyeOff, LogIn, LogOut, Sparkles, Trophy } from "lucide-react";
+import { ClipboardCheck, Eye, EyeOff, LogIn, LogOut, Megaphone, Sparkles, X } from "lucide-react";
 import { api, resolveMediaUrl } from "@/lib/api";
+import { readAdminNotices, type AdminNotice } from "@/lib/notices";
+
+const MAIN_TEACHER_VIDEO_ID = "DNobgocypGg";
+const ASSISTANT_TEACHER_VIDEO_ID = "";
 
 function todayLabel() {
   const d = new Date();
@@ -41,6 +45,8 @@ export default function StartView() {
   const [loading, setLoading] = React.useState(false);
   // 로그인 성공 시 잠시 환영 메시지를 보여주기 위한 상태
   const [loggedIn, setLoggedIn] = React.useState<TeacherAccount | null>(null);
+  const [teacherNotices, setTeacherNotices] = React.useState<AdminNotice[]>([]);
+  const [noticePopupOpen, setNoticePopupOpen] = React.useState(false);
 
   React.useEffect(() => {
     const savedTeacher = localStorage.getItem("teacher_info");
@@ -52,6 +58,24 @@ export default function StartView() {
       localStorage.removeItem("teacher_info");
     }
   }, []);
+
+  const loadTeacherNotices = React.useCallback(() => {
+    try {
+      const parsed = readAdminNotices();
+      const popupNotices = parsed.filter((notice) => notice.showToTeachers);
+      setTeacherNotices(popupNotices);
+      setNoticePopupOpen(popupNotices.length > 0);
+    } catch {
+      setTeacherNotices([]);
+      setNoticePopupOpen(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (loggedIn) {
+      loadTeacherNotices();
+    }
+  }, [loadTeacherNotices, loggedIn]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +90,7 @@ export default function StartView() {
 
     try {
       const response = await api.login(userId.trim(), password);
-      
+
       const account: TeacherAccount = {
         id: response.id!.toString(),
         name: response.name!,
@@ -75,12 +99,13 @@ export default function StartView() {
         className: response.className!,
         photoUrl: resolveMediaUrl(response.photoUrl)
       };
-      
+
       // 상태 저장
       setLoggedIn(account);
-      
+
       // 교사 정보 저장 (TeacherCheckView 등에서 사용)
       localStorage.setItem("teacher_info", JSON.stringify(account));
+      loadTeacherNotices();
     } catch (err: any) {
       setError(err.message || "아이디 또는 비밀번호가 올바르지 않습니다.");
       setLoading(false);
@@ -104,8 +129,70 @@ export default function StartView() {
 
   // 로그인 성공 후 선생님이 사용할 화면 선택
   if (loggedIn) {
+    const showAssistantVideo = loggedIn.role === "부교사" && ASSISTANT_TEACHER_VIDEO_ID.length > 0;
+
     return (
-      <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center justify-center bg-pastel-cream px-6">
+      <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center bg-pastel-cream px-6 py-[max(env(safe-area-inset-top),2rem)]">
+        {noticePopupOpen && teacherNotices.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-5 backdrop-blur-sm">
+            <section
+              className="max-h-[80dvh] w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-200"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="teacher-notice-title"
+            >
+              <div className="flex items-start justify-between gap-3 bg-gradient-to-br from-pastel-yellow to-pastel-pink px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-pastel-yellowDeep shadow-sm">
+                    <Megaphone className="h-6 w-6" />
+                  </span>
+                  <div>
+                    <h2 id="teacher-notice-title" className="text-lg font-extrabold text-slate-800">공지사항</h2>
+                    <p className="mt-0.5 text-xs font-bold text-slate-600">관리자가 전달한 공지입니다.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNoticePopupOpen(false)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-700 active:scale-95"
+                  aria-label="공지 팝업 닫기"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="max-h-[56dvh] overflow-y-auto px-5 py-4">
+                <div className="flex flex-col gap-3">
+                  {teacherNotices.map((notice) => (
+                    <article key={notice.id} className="rounded-2xl bg-pastel-cream p-4 ring-1 ring-pastel-yellowDeep/20">
+                      <h3 className="break-words text-base font-extrabold text-slate-800">{notice.title}</h3>
+                      <p className="mt-1 text-xs font-bold text-slate-400">
+                        {new Intl.DateTimeFormat("ko-KR", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }).format(new Date(notice.createdAt))}
+                      </p>
+                      <p className="mt-3 whitespace-pre-wrap break-words text-sm font-bold leading-6 text-slate-600">
+                        {notice.content}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+              <div className="border-t border-slate-100 px-5 py-4">
+                <button
+                  type="button"
+                  onClick={() => setNoticePopupOpen(false)}
+                  className="h-12 w-full rounded-2xl bg-gradient-to-br from-pastel-greenDeep to-pastel-blueDeep text-base font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+                >
+                  확인
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
         <div className="flex w-full animate-fade-in flex-col items-center gap-5">
           {/* 환영 아바타 */}
           <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-pastel-greenDeep bg-white shadow-soft">
@@ -142,20 +229,12 @@ export default function StartView() {
                 <span className="mt-0.5 block text-xs font-bold text-white/80">오늘 반별 체크 화면</span>
               </span>
             </button>
-            <button
-              type="button"
-              disabled
-              className="flex min-h-20 cursor-not-allowed items-center gap-4 rounded-3xl bg-slate-200 px-5 py-4 text-left opacity-70 shadow-sm"
-              aria-disabled="true"
-            >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-slate-400 shadow-sm">
-                <Trophy className="h-7 w-7" />
-              </span>
-              <span>
-                <span className="block text-lg font-extrabold text-slate-500">암송잔치</span>
-                <span className="mt-0.5 block text-xs font-bold text-slate-400">준비 중</span>
-              </span>
-            </button>
+          </div>
+          <div className="grid w-full gap-3">
+            <YoutubeCard videoId={MAIN_TEACHER_VIDEO_ID} title="이번 주 공과" />
+            {showAssistantVideo && (
+              <YoutubeCard videoId={ASSISTANT_TEACHER_VIDEO_ID} title="손유희 영상" />
+            )}
           </div>
           <button
             type="button"
@@ -178,14 +257,11 @@ export default function StartView() {
           <Sparkles className="h-8 w-8 text-pastel-yellowDeep" />
         </div>
         <p className="mt-3 text-xs font-bold tracking-[0.2em] text-pastel-yellowDeep sm:text-sm">
-          {todayLabel()} · 2026 상반기
+          {todayLabel()}
         </p>
         <h1 className="mt-2 text-[1.75rem] font-extrabold leading-tight text-slate-800 sm:text-[2rem]">
-          암송잔치
+          동탄교회 유치부
         </h1>
-        <p className="mt-2 text-sm text-slate-500 sm:text-base">
-          선생님, 오늘도 환영해요 👋
-        </p>
       </header>
 
       {/* 로그인 폼 */}
@@ -300,5 +376,24 @@ export default function StartView() {
       {/* 하단 여백 */}
       <div className="pb-[max(env(safe-area-inset-bottom),1rem)]" />
     </main>
+  );
+}
+
+function YoutubeCard({ videoId, title }: { videoId: string; title: string }) {
+  return (
+    <section className="w-full overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-pastel-yellowDeep/20">
+      <div className="border-b border-slate-100 px-4 py-3">
+        <h2 className="text-sm font-extrabold text-slate-700">{title}</h2>
+      </div>
+      <div className="aspect-video w-full bg-slate-100">
+        <iframe
+          className="h-full w-full"
+          src={`https://www.youtube.com/embed/${videoId}`}
+          title={title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    </section>
   );
 }

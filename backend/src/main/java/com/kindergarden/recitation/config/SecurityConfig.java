@@ -20,7 +20,7 @@ import java.util.List;
 public class SecurityConfig {
 
     // 콤마로 구분된 허용 오리진. 운영: APP_ALLOWED_ORIGINS=https://xxx.vercel.app,http://localhost:3000
-    @Value("${app.allowed-origins:http://localhost:3000}")
+    @Value("${app.allowed-origins:http://localhost:3000,http://localhost:3001}")
     private String allowedOrigins;
 
     @Bean

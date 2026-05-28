@@ -10,8 +10,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, XCircle, ArrowLeft, Camera, RefreshCw } from "lucide-react";
+import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2 } from "lucide-react";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
+import { readAdminNotices, writeAdminNotices, type AdminNotice } from "@/lib/notices";
 
 const TOTAL_RECITATIONS = 16;
 const TOTAL_QUIZZES = 18;
@@ -21,6 +22,68 @@ const KINDERGARTEN_ACTIVITY_TYPES = [
   { key: "KINDERGARTEN_FOUNDATION", label: "머릿돌", color: "emerald" },
   { key: "KINDERGARTEN_RECITATION", label: "암송", color: "sky" },
 ] as const;
+
+const KINDERGARTEN_BOOKS = [
+  { id: 1, title: "1~3월", start: 1, end: 13 },
+  { id: 2, title: "4~6월", start: 14, end: 26 },
+  { id: 3, title: "7~9월", start: 27, end: 39 },
+  { id: 4, title: "10~12월", start: 40, end: 52 },
+];
+
+const LESSON_TITLES: Record<number, string> = {
+  1: "친구야 안녕",
+  2: "나는 교회학교가 좋아요",
+  3: "보이지 않는 하나님",
+  4: "나를 사랑하시는 하나님",
+  5: "성경은 하나님이 보내신 편지",
+  6: "빛을 만드신 하나님",
+  7: "하늘을 만드신 하나님",
+  8: "땅에는 나무와 꽃들이 있어요",
+  9: "해와 달과 별을 만드신 하나님",
+  10: "새를 만드신 하나님",
+  11: "물고기를 만드신 하나님",
+  12: "땅에는 동물들이 살아요",
+  13: "하나님은 흙으로 사람을 만드셨어요",
+  14: "에덴동산",
+  15: "방주에 타세요",
+  16: "바벨탑을 쌓았어요",
+  17: "하나님의 말씀을 따른 아브람",
+  18: "이삭을 바친 아브라함",
+  19: "쌍둥이 형제 에서와 야곱",
+  20: "총리가 된 요셉",
+  21: "물에서 건진 모세",
+  22: "열가지 재앙",
+  23: "홍해를 건넜어요",
+  24: "광야에서 지켜주신 하나님",
+  25: "하나님을 의지한 여호수아와 갈렙",
+  26: "무너진 여리고성",
+  27: "믿음의 승리자 기드온",
+  28: "힘을 잃은 삼손",
+  29: "말씀을 따르지 않은 사울 왕",
+  30: "용감한 다윗",
+  31: "다윗과 요나단",
+  32: "지혜의 왕 솔로몬",
+  33: "선지자 엘리야",
+  34: "기도하는 다니엘",
+  35: "물고기 뱃속에 갇힌 요나",
+  36: "말씀대로 예수님께서 태어나셨어요",
+  37: "지혜로우신 예수님",
+  38: "시험을 이기신 예수님",
+  39: "예수님께서는 어린이를 사랑하세요",
+  40: "물로 포도주를 만드셨어요",
+  41: "예수님은 아픈 사람을 고쳐 주셨어요",
+  42: "많은 사람을 먹이셨어요",
+  43: "거친 바다를 잔잔하게 하셨어요",
+  44: "죽은 나사로를 살리셨어요",
+  45: "다시 찾은 아들",
+  46: "삭개오는 예수님을 만났어요",
+  47: "예수님께서 제자의 발을 씻기셨어요",
+  48: "고난 받으신 예수님",
+  49: "예수님은 다시 살아나셨어요",
+  50: "다시 오실 예수님",
+  51: "천국",
+  52: "하나님 감사해요"
+};
 
 function countSuccess(states: Record<number, "success" | "fail"> | undefined): number {
   if (!states) return 0;
@@ -49,12 +112,60 @@ export default function AdminDashboardView({
   const router = useRouter();
   const [authenticated, setAuthenticated] = React.useState(false);
   const [mode, setMode] = React.useState<"festival" | "kindergarten">(initialMode);
+  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice">(initialMode);
   const [expandedClass, setExpandedClass] = React.useState<number | null>(null);
   const [expandedStudent, setExpandedStudent] = React.useState<number | null>(null);
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
   const [refreshing, setRefreshing] = React.useState(false);
   const [unlockingStudentId, setUnlockingStudentId] = React.useState<number | null>(null);
   const [toast, setToast] = React.useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [notices, setNotices] = React.useState<AdminNotice[]>([]);
+  const [noticeTitle, setNoticeTitle] = React.useState("");
+  const [noticeContent, setNoticeContent] = React.useState("");
+  const [noticeShouldPopup, setNoticeShouldPopup] = React.useState(false);
+
+  const [subTab, setSubTab] = React.useState<"check" | "chart">("check");
+  const [selectedBookId, setSelectedBookId] = React.useState(1);
+
+  React.useEffect(() => {
+    setSubTab("check");
+  }, [expandedStudent]);
+
+  const handleToggleKindergartenActivity = async (studentId: number, lessonNum: number, activityType: string, currentSuccess: boolean) => {
+    const nextSuccess = !currentSuccess;
+    const activityKey = `${lessonNum}:${activityType}`;
+
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.studentId !== studentId) return s;
+        const currentStates = s.kindergartenActivityStates || {};
+        const newStates = { ...currentStates };
+        if (nextSuccess) {
+          newStates[activityKey] = "success";
+        } else {
+          delete newStates[activityKey];
+        }
+        return {
+          ...s,
+          kindergartenActivityStates: newStates
+        };
+      })
+    );
+
+    try {
+      await api.toggleRecitation(
+        studentId,
+        lessonNum,
+        activityType,
+        nextSuccess ? true : null,
+        0
+      );
+    } catch (e) {
+      console.error("API 저장 실패", e);
+      setToast({ kind: "error", text: "상태 저장 중 오류가 발생했습니다." });
+      loadScores();
+    }
+  };
 
   React.useEffect(() => {
     if (!toast) return;
@@ -87,6 +198,11 @@ export default function AdminDashboardView({
       return;
     }
     setAuthenticated(true);
+    try {
+      setNotices(readAdminNotices());
+    } catch {
+      setNotices([]);
+    }
     loadScores();
   }, [loadScores, router]);
 
@@ -110,6 +226,39 @@ export default function AdminDashboardView({
     }
   };
 
+  const saveNotices = (nextNotices: AdminNotice[]) => {
+    setNotices(nextNotices);
+    writeAdminNotices(nextNotices);
+  };
+
+  const handleAddNotice = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = noticeTitle.trim();
+    const content = noticeContent.trim();
+    if (!title || !content) {
+      setToast({ kind: "error", text: "공지 제목과 내용을 입력해 주세요." });
+      return;
+    }
+
+    const nextNotice: AdminNotice = {
+      id: `${Date.now()}`,
+      title,
+      content,
+      createdAt: new Date().toISOString(),
+      showToTeachers: noticeShouldPopup,
+    };
+    saveNotices([nextNotice, ...notices]);
+    setNoticeTitle("");
+    setNoticeContent("");
+    setNoticeShouldPopup(false);
+    setToast({ kind: "success", text: noticeShouldPopup ? "선생님 팝업 공지를 등록했습니다." : "공지사항을 추가했습니다." });
+  };
+
+  const handleDeleteNotice = (noticeId: string) => {
+    saveNotices(notices.filter((notice) => notice.id !== noticeId));
+    setToast({ kind: "success", text: "공지사항을 삭제했습니다." });
+  };
+
   if (!authenticated) return null;
 
   const submittedOnly = students.filter((s) => s.submitted);
@@ -125,8 +274,8 @@ export default function AdminDashboardView({
   const totalStudents = students.length;
   const submittedStudents = submittedOnly.length;
   const visibleClasses = classIds.length;
-  const screenTitle = mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
-  const screenSubtitle = mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
+  const screenTitle = activeTab === "notice" ? "공지사항 관리" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
+  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-8">
@@ -147,7 +296,10 @@ export default function AdminDashboardView({
               type="button"
               onClick={() => loadScores(true)}
               disabled={refreshing}
-              className="flex h-10 items-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-400 ring-1 ring-slate-700 transition hover:text-white active:scale-95 disabled:opacity-60"
+              className={cn(
+                "flex h-10 items-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-400 ring-1 ring-slate-700 transition hover:text-white active:scale-95 disabled:opacity-60",
+                activeTab === "notice" && "hidden sm:flex"
+              )}
               title="새로고침"
             >
               <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
@@ -175,18 +327,19 @@ export default function AdminDashboardView({
 
       {/* 화면 선택 */}
       <section className="px-5 pt-2">
-        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700">
           <button
             type="button"
             onClick={() => {
               setMode("kindergarten");
+              setActiveTab("kindergarten");
               setExpandedClass(null);
               setExpandedStudent(null);
               router.push("/admin/dashboard/kindergarten");
             }}
             className={cn(
               "h-11 rounded-xl text-sm font-extrabold transition active:scale-[0.98]",
-              mode === "kindergarten"
+              activeTab === "kindergarten"
                 ? "bg-emerald-500 text-white shadow"
                 : "text-slate-400 hover:text-white"
             )}
@@ -197,31 +350,63 @@ export default function AdminDashboardView({
             type="button"
             onClick={() => {
               setMode("festival");
+              setActiveTab("festival");
               setExpandedClass(null);
               setExpandedStudent(null);
               router.push("/admin/dashboard/festival");
             }}
             className={cn(
               "h-11 rounded-xl text-sm font-extrabold transition active:scale-[0.98]",
-              mode === "festival"
+              activeTab === "festival"
                 ? "bg-amber-400 text-slate-900 shadow"
                 : "text-slate-400 hover:text-white"
             )}
           >
             암송잔치
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("notice");
+              setExpandedClass(null);
+              setExpandedStudent(null);
+            }}
+            className={cn(
+              "flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-extrabold transition active:scale-[0.98]",
+              activeTab === "notice"
+                ? "bg-sky-500 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            <Megaphone className="h-4 w-4" />
+            공지사항
+          </button>
         </div>
       </section>
 
-      {/* 통계 카드 */}
-      <section className="grid grid-cols-3 gap-3 px-5 pt-2">
-        <StatCard icon={<Users className="h-5 w-5" />} label="전체 학생" value={`${totalStudents}명`} color="blue" />
-        <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="제출 완료" value={`${submittedStudents}명`} color="green" />
-        <StatCard icon={<BookOpen className="h-5 w-5" />} label="표시 반" value={`${visibleClasses}반`} color="amber" />
-      </section>
+      {activeTab === "notice" ? (
+        <NoticeManager
+          notices={notices}
+          title={noticeTitle}
+          content={noticeContent}
+          shouldPopup={noticeShouldPopup}
+          onTitleChange={setNoticeTitle}
+          onContentChange={setNoticeContent}
+          onShouldPopupChange={setNoticeShouldPopup}
+          onAdd={handleAddNotice}
+          onDelete={handleDeleteNotice}
+        />
+      ) : (
+        <>
+          {/* 통계 카드 */}
+          <section className="grid grid-cols-3 gap-3 px-5 pt-2">
+            <StatCard icon={<Users className="h-5 w-5" />} label="전체 학생" value={`${totalStudents}명`} color="blue" />
+            <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="제출 완료" value={`${submittedStudents}명`} color="green" />
+            <StatCard icon={<BookOpen className="h-5 w-5" />} label="표시 반" value={`${visibleClasses}반`} color="amber" />
+          </section>
 
-      {/* 반별 아코디언 */}
-      <section className="mt-6 px-5">
+          {/* 반별 아코디언 */}
+          <section className="mt-6 px-5">
         <h2 className="mb-3 text-base font-extrabold text-slate-300">
           {mode === "festival" ? "📋 암송잔치 반별 현황" : "🌱 유치부 반별 현황"}
         </h2>
@@ -322,6 +507,12 @@ export default function AdminDashboardView({
                                       </span>
                                     </>
                                   )}
+                                  {mode === "kindergarten" && (
+                                    <span className="flex items-center gap-1 text-xs font-bold">
+                                      <span className="text-emerald-400">총 {attendanceCount + foundationCount + kindergartenRecitationCount}</span>
+                                      <span className="text-slate-500">/156</span>
+                                    </span>
+                                  )}
                                   {isStudentExpanded ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
                                 </div>
                               </button>
@@ -331,21 +522,113 @@ export default function AdminDashboardView({
                                 <div className="border-t border-slate-700/50 px-3 pb-3 pt-2">
                                   {mode === "kindergarten" && (
                                     <>
-                                      <p className="mb-2 text-xs font-bold text-amber-300">🌱 유치부 활동</p>
-                                      <div className="mb-4 grid grid-cols-3 gap-2">
-                                        {KINDERGARTEN_ACTIVITY_TYPES.map((activity) => {
-                                          const count = countKindergartenActivity(student, activity.key);
-                                          return (
-                                            <ActivityDonut
-                                              key={activity.key}
-                                              label={activity.label}
-                                              count={count}
-                                              total={TOTAL_KINDERGARTEN_LESSONS}
-                                              color={activity.color}
-                                            />
-                                          );
-                                        })}
+                                      <div className="flex gap-2 mb-4 bg-slate-800 p-1 rounded-xl ring-1 ring-slate-700/50">
+                                        <button
+                                          type="button"
+                                          onClick={() => setSubTab("check")}
+                                          className={cn(
+                                            "flex-1 h-9 rounded-lg text-xs font-bold transition",
+                                            subTab === "check"
+                                              ? "bg-slate-700 text-white shadow-sm ring-1 ring-slate-600"
+                                              : "text-slate-400 hover:text-white"
+                                          )}
+                                        >
+                                          활동 체크
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setSubTab("chart")}
+                                          className={cn(
+                                            "flex-1 h-9 rounded-lg text-xs font-bold transition",
+                                            subTab === "chart"
+                                              ? "bg-slate-700 text-white shadow-sm ring-1 ring-slate-600"
+                                              : "text-slate-400 hover:text-white"
+                                          )}
+                                        >
+                                          진행 현황 (원그래프)
+                                        </button>
                                       </div>
+
+                                      {subTab === "check" ? (
+                                        <div className="space-y-4">
+                                          <div className="grid grid-cols-4 gap-1 rounded-xl bg-slate-900/60 p-1 ring-1 ring-slate-800">
+                                            {KINDERGARTEN_BOOKS.map((book) => {
+                                              const active = selectedBookId === book.id;
+                                              return (
+                                                <button
+                                                  key={book.id}
+                                                  type="button"
+                                                  onClick={() => setSelectedBookId(book.id)}
+                                                  className={cn(
+                                                    "h-8 rounded-lg px-1 text-center text-[11px] font-bold transition",
+                                                    active
+                                                      ? "bg-slate-800 text-emerald-400 shadow-sm ring-1 ring-slate-700"
+                                                      : "text-slate-400 hover:text-slate-200"
+                                                  )}
+                                                >
+                                                  {book.title}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+
+                                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                            {(() => {
+                                              const book = KINDERGARTEN_BOOKS.find(b => b.id === selectedBookId) ?? KINDERGARTEN_BOOKS[0];
+                                              const lessons = Array.from({ length: book.end - book.start + 1 }, (_, i) => book.start + i);
+                                              return lessons.map((lesson) => {
+                                                const states = student.kindergartenActivityStates ?? {};
+                                                return (
+                                                  <div key={lesson} className="flex flex-col gap-2 rounded-xl bg-slate-900/40 p-3 ring-1 ring-slate-800/80">
+                                                    <div className="flex justify-between items-center">
+                                                      <span className="text-xs font-extrabold text-slate-300">
+                                                        {lesson}과: {LESSON_TITLES[lesson]}
+                                                      </span>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                      {KINDERGARTEN_ACTIVITY_TYPES.map((activity) => {
+                                                        const activeKey = `${lesson}:${activity.key}`;
+                                                        const isChecked = states[activeKey] === "success";
+                                                        return (
+                                                          <button
+                                                            key={activity.key}
+                                                            type="button"
+                                                            onClick={() => handleToggleKindergartenActivity(student.studentId, lesson, activity.key, isChecked)}
+                                                            className={cn(
+                                                              "flex h-9 items-center justify-center rounded-xl text-xs font-bold transition active:scale-95",
+                                                              isChecked && activity.color === "amber" && "bg-amber-500 text-white shadow-sm",
+                                                              isChecked && activity.color === "emerald" && "bg-emerald-500 text-white shadow-sm",
+                                                              isChecked && activity.color === "sky" && "bg-sky-500 text-white shadow-sm",
+                                                              !isChecked && "bg-slate-800 text-slate-400 hover:text-slate-200 ring-1 ring-slate-700/60"
+                                                            )}
+                                                          >
+                                                            {activity.label}
+                                                          </button>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              });
+                                            })()}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="grid grid-cols-3 gap-2">
+                                          {KINDERGARTEN_ACTIVITY_TYPES.map((activity) => {
+                                            const count = countKindergartenActivity(student, activity.key);
+                                            return (
+                                              <ActivityDonut
+                                                key={activity.key}
+                                                label={activity.label}
+                                                count={count}
+                                                total={TOTAL_KINDERGARTEN_LESSONS}
+                                                color={activity.color}
+                                              />
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                     </>
                                   )}
 
@@ -401,7 +684,9 @@ export default function AdminDashboardView({
             );
           })}
         </div>
-      </section>
+          </section>
+        </>
+      )}
       {toast && (
         <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-5">
           <div
@@ -416,6 +701,131 @@ export default function AdminDashboardView({
         </div>
       )}
     </main>
+  );
+}
+
+function NoticeManager({
+  notices,
+  title,
+  content,
+  shouldPopup,
+  onTitleChange,
+  onContentChange,
+  onShouldPopupChange,
+  onAdd,
+  onDelete,
+}: {
+  notices: AdminNotice[];
+  title: string;
+  content: string;
+  shouldPopup: boolean;
+  onTitleChange: (value: string) => void;
+  onContentChange: (value: string) => void;
+  onShouldPopupChange: (value: boolean) => void;
+  onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
+  onDelete: (noticeId: string) => void;
+}) {
+  return (
+    <section className="px-5 pt-4">
+      <form onSubmit={onAdd} className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-white">새 공지 작성</h2>
+            <p className="mt-0.5 text-xs font-bold text-slate-500">공지 글을 추가하면 아래 목록에 최신순으로 표시됩니다.</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onShouldPopupChange(!shouldPopup)}
+              aria-pressed={shouldPopup}
+              className={cn(
+                "flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-extrabold shadow transition active:scale-95",
+                shouldPopup
+                  ? "bg-amber-400 text-slate-900 hover:bg-amber-300"
+                  : "bg-slate-700 text-slate-400 shadow-none ring-1 ring-slate-600 hover:text-slate-200"
+              )}
+            >
+              <Megaphone className="h-4 w-4" />
+              공지
+            </button>
+            <button
+              type="submit"
+              className="flex h-10 items-center gap-1.5 rounded-xl bg-sky-500 px-3 text-sm font-extrabold text-white shadow transition hover:bg-sky-400 active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+              추가
+            </button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <input
+            value={title}
+            onChange={(event) => onTitleChange(event.target.value)}
+            placeholder="공지 제목"
+            className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-sky-400"
+          />
+          <textarea
+            value={content}
+            onChange={(event) => onContentChange(event.target.value)}
+            placeholder="공지 내용"
+            rows={4}
+            className="w-full resize-none rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-sm font-bold leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-sky-400"
+          />
+        </div>
+      </form>
+
+      <div className="mt-5 flex items-center justify-between">
+        <h2 className="text-base font-extrabold text-slate-300">공지 글 목록</h2>
+        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+          {notices.length}개
+        </span>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3">
+        {notices.length === 0 && (
+          <div className="rounded-2xl bg-slate-800 px-4 py-10 text-center ring-1 ring-slate-700">
+            <Megaphone className="mx-auto h-8 w-8 text-slate-600" />
+            <p className="mt-3 text-sm font-extrabold text-slate-400">등록된 공지사항이 없습니다.</p>
+          </div>
+        )}
+        {notices.map((notice) => (
+          <article key={notice.id} className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="break-words text-base font-extrabold text-white">{notice.title}</h3>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-bold text-slate-500">
+                    {new Intl.DateTimeFormat("ko-KR", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }).format(new Date(notice.createdAt))}
+                  </p>
+                  {notice.showToTeachers && (
+                    <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] font-extrabold text-amber-300 ring-1 ring-amber-400/30">
+                      선생님 팝업
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onDelete(notice.id)}
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-red-500/10 px-3 text-xs font-extrabold text-red-300 ring-1 ring-red-500/25 transition hover:bg-red-500/20 active:scale-95"
+              >
+                <Trash2 className="h-4 w-4" />
+                삭제
+              </button>
+            </div>
+            <p className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-slate-900/60 p-3 text-sm font-bold leading-6 text-slate-300 ring-1 ring-slate-700/60">
+              {notice.content}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
