@@ -15,10 +15,6 @@
   <img src="./assets/admin-dashboard.png" alt="관리자 대시보드" width="260" />
 </p>
 
-### 🎬 데모 영상
-
-- [이번 주 공과 영상](https://www.youtube.com/watch?v=DNobgocypGg)
-
 ---
 
 ## 👥 사용자 역할 및 주요 화면 (User Registry)
