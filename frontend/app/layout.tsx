@@ -19,7 +19,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   // 접근성을 위해 확대 자체는 허용 (userScalable 기본값 true 유지).
   viewportFit: "cover",
-  themeColor: "#FFFBEF", // pastel.cream
+  themeColor: "#F8FAFC",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

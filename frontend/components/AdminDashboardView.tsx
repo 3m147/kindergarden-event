@@ -10,9 +10,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2 } from "lucide-react";
+import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2, Image as ImageIcon, Upload, FileText, ExternalLink, CalendarDays } from "lucide-react";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 import { readAdminNotices, writeAdminNotices, type AdminNotice } from "@/lib/notices";
+import { readWeeklyPhotos, writeWeeklyPhotos, type WeeklyPhoto } from "@/lib/weeklyPhotos";
+import { readFoundationMaterials, writeFoundationMaterials, type FoundationMaterial } from "@/lib/foundationMaterials";
+import { readScheduleImages, writeScheduleImages, type ScheduleImage } from "@/lib/scheduleImages";
 
 const TOTAL_RECITATIONS = 16;
 const TOTAL_QUIZZES = 18;
@@ -112,7 +115,7 @@ export default function AdminDashboardView({
   const router = useRouter();
   const [authenticated, setAuthenticated] = React.useState(false);
   const [mode, setMode] = React.useState<"festival" | "kindergarten">(initialMode);
-  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice">(initialMode);
+  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice" | "schedule" | "foundation">(initialMode);
   const [expandedClass, setExpandedClass] = React.useState<number | null>(null);
   const [expandedStudent, setExpandedStudent] = React.useState<number | null>(null);
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
@@ -123,6 +126,12 @@ export default function AdminDashboardView({
   const [noticeTitle, setNoticeTitle] = React.useState("");
   const [noticeContent, setNoticeContent] = React.useState("");
   const [noticeShouldPopup, setNoticeShouldPopup] = React.useState(false);
+  const [weeklyPhotos, setWeeklyPhotos] = React.useState<WeeklyPhoto[]>([]);
+  const [weeklyPhotoTitle, setWeeklyPhotoTitle] = React.useState("");
+  const [foundationMaterials, setFoundationMaterials] = React.useState<FoundationMaterial[]>([]);
+  const [foundationTitle, setFoundationTitle] = React.useState("");
+  const [scheduleImages, setScheduleImages] = React.useState<ScheduleImage[]>([]);
+  const [scheduleTitle, setScheduleTitle] = React.useState("");
 
   const [subTab, setSubTab] = React.useState<"check" | "chart">("check");
   const [selectedBookId, setSelectedBookId] = React.useState(1);
@@ -200,8 +209,14 @@ export default function AdminDashboardView({
     setAuthenticated(true);
     try {
       setNotices(readAdminNotices());
+      setWeeklyPhotos(readWeeklyPhotos());
+      setFoundationMaterials(readFoundationMaterials());
+      setScheduleImages(readScheduleImages());
     } catch {
       setNotices([]);
+      setWeeklyPhotos([]);
+      setFoundationMaterials([]);
+      setScheduleImages([]);
     }
     loadScores();
   }, [loadScores, router]);
@@ -259,6 +274,206 @@ export default function AdminDashboardView({
     setToast({ kind: "success", text: "공지사항을 삭제했습니다." });
   };
 
+  const saveWeeklyPhotos = (nextPhotos: WeeklyPhoto[]) => {
+    try {
+      writeWeeklyPhotos(nextPhotos);
+      setWeeklyPhotos(nextPhotos);
+      return true;
+    } catch (error) {
+      console.error("사진 저장 실패", error);
+      setToast({ kind: "error", text: "사진 용량이 너무 큽니다. 더 작은 사진으로 추가해 주세요." });
+      return false;
+    }
+  };
+
+  const handleAddWeeklyPhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setToast({ kind: "error", text: "이미지 파일만 추가할 수 있습니다." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const imageUrl = typeof reader.result === "string" ? reader.result : "";
+      if (!imageUrl) {
+        setToast({ kind: "error", text: "사진을 읽는 중 오류가 발생했습니다." });
+        return;
+      }
+
+      const nextPhoto: WeeklyPhoto = {
+        id: `${Date.now()}`,
+        title: weeklyPhotoTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "이번 주 유치부 사진",
+        imageUrl,
+        createdAt: new Date().toISOString(),
+      };
+      const saved = saveWeeklyPhotos([nextPhoto, ...weeklyPhotos]);
+      if (!saved) return;
+      setWeeklyPhotoTitle("");
+      setToast({ kind: "success", text: "이번 주 유치부 사진을 추가했습니다." });
+    };
+    reader.onerror = () => {
+      setToast({ kind: "error", text: "사진을 읽는 중 오류가 발생했습니다." });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDeleteWeeklyPhoto = (photoId: string) => {
+    saveWeeklyPhotos(weeklyPhotos.filter((photo) => photo.id !== photoId));
+    setToast({ kind: "success", text: "이번 주 유치부 사진을 삭제했습니다." });
+  };
+
+  const saveFoundationMaterials = (nextMaterials: FoundationMaterial[]) => {
+    try {
+      writeFoundationMaterials(nextMaterials);
+      setFoundationMaterials(nextMaterials);
+      return true;
+    } catch (error) {
+      console.error("머릿돌 PDF 저장 실패", error);
+      setToast({ kind: "error", text: "PDF 용량이 너무 큽니다. 더 작은 파일로 추가해 주세요." });
+      return false;
+    }
+  };
+
+  const handleAddFoundationMaterial = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      setToast({ kind: "error", text: "PDF 파일만 추가할 수 있습니다." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const pdfUrl = typeof reader.result === "string" ? reader.result : "";
+      if (!pdfUrl) {
+        setToast({ kind: "error", text: "PDF를 읽는 중 오류가 발생했습니다." });
+        return;
+      }
+
+      const nextMaterial: FoundationMaterial = {
+        id: `${Date.now()}`,
+        title: foundationTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "머릿돌",
+        fileName: file.name,
+        pdfUrl,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+      };
+      const saved = saveFoundationMaterials([
+        nextMaterial,
+        ...foundationMaterials.map((material) => ({ ...material, isActive: false })),
+      ]);
+      if (!saved) return;
+      setFoundationTitle("");
+      setToast({ kind: "success", text: "머릿돌 PDF를 추가하고 현재 자료로 설정했습니다." });
+    };
+    reader.onerror = () => {
+      setToast({ kind: "error", text: "PDF를 읽는 중 오류가 발생했습니다." });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleActivateFoundationMaterial = (materialId: string) => {
+    saveFoundationMaterials(
+      foundationMaterials.map((material) => ({
+        ...material,
+        isActive: material.id === materialId,
+      }))
+    );
+    setToast({ kind: "success", text: "선생님 화면에 표시할 머릿돌을 변경했습니다." });
+  };
+
+  const handleDeleteFoundationMaterial = (materialId: string) => {
+    const deletingActive = foundationMaterials.find((material) => material.id === materialId)?.isActive;
+    const nextMaterials = foundationMaterials.filter((material) => material.id !== materialId);
+    const normalizedMaterials =
+      deletingActive && nextMaterials.length > 0
+        ? nextMaterials.map((material, index) => ({ ...material, isActive: index === 0 }))
+        : nextMaterials;
+
+    saveFoundationMaterials(normalizedMaterials);
+    setToast({ kind: "success", text: "머릿돌 PDF를 삭제했습니다." });
+  };
+
+  const saveScheduleImages = (nextImages: ScheduleImage[]) => {
+    try {
+      writeScheduleImages(nextImages);
+      setScheduleImages(nextImages);
+      return true;
+    } catch (error) {
+      console.error("계획표 이미지 저장 실패", error);
+      setToast({ kind: "error", text: "이미지 용량이 너무 큽니다. 더 작은 이미지로 추가해 주세요." });
+      return false;
+    }
+  };
+
+  const handleAddScheduleImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setToast({ kind: "error", text: "이미지 파일만 추가할 수 있습니다." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const imageUrl = typeof reader.result === "string" ? reader.result : "";
+      if (!imageUrl) {
+        setToast({ kind: "error", text: "계획표 이미지를 읽는 중 오류가 발생했습니다." });
+        return;
+      }
+
+      const nextImage: ScheduleImage = {
+        id: `${Date.now()}`,
+        title: scheduleTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "계획표",
+        fileName: file.name,
+        imageUrl,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+      };
+      const saved = saveScheduleImages([
+        nextImage,
+        ...scheduleImages.map((image) => ({ ...image, isActive: false })),
+      ]);
+      if (!saved) return;
+      setScheduleTitle("");
+      setToast({ kind: "success", text: "계획표 이미지를 추가하고 현재 계획표로 설정했습니다." });
+    };
+    reader.onerror = () => {
+      setToast({ kind: "error", text: "계획표 이미지를 읽는 중 오류가 발생했습니다." });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleActivateScheduleImage = (imageId: string) => {
+    saveScheduleImages(
+      scheduleImages.map((image) => ({
+        ...image,
+        isActive: image.id === imageId,
+      }))
+    );
+    setToast({ kind: "success", text: "선생님 화면에 표시할 계획표를 변경했습니다." });
+  };
+
+  const handleDeleteScheduleImage = (imageId: string) => {
+    const deletingActive = scheduleImages.find((image) => image.id === imageId)?.isActive;
+    const nextImages = scheduleImages.filter((image) => image.id !== imageId);
+    const normalizedImages =
+      deletingActive && nextImages.length > 0
+        ? nextImages.map((image, index) => ({ ...image, isActive: index === 0 }))
+        : nextImages;
+
+    saveScheduleImages(normalizedImages);
+    setToast({ kind: "success", text: "계획표 이미지를 삭제했습니다." });
+  };
+
   if (!authenticated) return null;
 
   const submittedOnly = students.filter((s) => s.submitted);
@@ -274,33 +489,33 @@ export default function AdminDashboardView({
   const totalStudents = students.length;
   const submittedStudents = submittedOnly.length;
   const visibleClasses = classIds.length;
-  const screenTitle = activeTab === "notice" ? "공지사항 관리" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
-  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
+  const screenTitle = activeTab === "notice" ? "공지사항 관리" : activeTab === "schedule" ? "계획표 관리" : activeTab === "foundation" ? "머릿돌 관리" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
+  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : activeTab === "schedule" ? "선생님 화면에 표시할 계획표 이미지 업로드 · 선택" : activeTab === "foundation" ? "선생님 화면에 표시할 PDF 업로드 · 선택" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
 
   return (
-    <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-8">
+    <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-[max(env(safe-area-inset-bottom),2rem)]">
       {/* 헤더 */}
       <header className="sticky top-0 z-20 bg-slate-900/95 px-5 pb-4 pt-[max(env(safe-area-inset-top),1.25rem)] backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500">
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-lg font-extrabold text-white sm:text-xl">{screenTitle}</h1>
               <p className="text-xs text-slate-400">{screenSubtitle}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <button
               type="button"
               onClick={() => loadScores(true)}
               disabled={refreshing}
               className={cn(
-                "flex h-10 items-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-400 ring-1 ring-slate-700 transition hover:text-white active:scale-95 disabled:opacity-60",
-                activeTab === "notice" && "hidden sm:flex"
+                "flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-300 ring-1 ring-slate-700 transition hover:text-white active:scale-95 disabled:opacity-60",
+                (activeTab === "notice" || activeTab === "schedule" || activeTab === "foundation") && "hidden sm:flex"
               )}
-              title="새로고침"
+              aria-label="현황 새로고침"
             >
               <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
               새로고침
@@ -308,7 +523,7 @@ export default function AdminDashboardView({
             <button
               type="button"
               onClick={() => router.push("/admin/profiles")}
-              className="flex h-10 items-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-400 ring-1 ring-slate-700 transition hover:text-white active:scale-95"
+              className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-300 ring-1 ring-slate-700 transition hover:text-white active:scale-95"
             >
               <Camera className="h-4 w-4" />
               프로필
@@ -316,7 +531,7 @@ export default function AdminDashboardView({
             <button
               type="button"
               onClick={handleLogout}
-              className="flex h-10 items-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-400 ring-1 ring-slate-700 transition hover:text-white active:scale-95"
+              className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-300 ring-1 ring-slate-700 transition hover:text-white active:scale-95 sm:col-auto"
             >
               <LogOut className="h-4 w-4" />
               로그아웃
@@ -327,9 +542,10 @@ export default function AdminDashboardView({
 
       {/* 화면 선택 */}
       <section className="px-5 pt-2">
-        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700">
+        <div className="grid grid-cols-5 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700" aria-label="관리자 화면 선택">
           <button
             type="button"
+            aria-pressed={activeTab === "kindergarten"}
             onClick={() => {
               setMode("kindergarten");
               setActiveTab("kindergarten");
@@ -338,7 +554,7 @@ export default function AdminDashboardView({
               router.push("/admin/dashboard/kindergarten");
             }}
             className={cn(
-              "h-11 rounded-xl text-sm font-extrabold transition active:scale-[0.98]",
+              "min-h-12 rounded-xl px-1 text-sm font-extrabold leading-tight transition active:scale-[0.98]",
               activeTab === "kindergarten"
                 ? "bg-emerald-500 text-white shadow"
                 : "text-slate-400 hover:text-white"
@@ -348,6 +564,7 @@ export default function AdminDashboardView({
           </button>
           <button
             type="button"
+            aria-pressed={activeTab === "festival"}
             onClick={() => {
               setMode("festival");
               setActiveTab("festival");
@@ -356,7 +573,7 @@ export default function AdminDashboardView({
               router.push("/admin/dashboard/festival");
             }}
             className={cn(
-              "h-11 rounded-xl text-sm font-extrabold transition active:scale-[0.98]",
+              "min-h-12 rounded-xl px-1 text-sm font-extrabold leading-tight transition active:scale-[0.98]",
               activeTab === "festival"
                 ? "bg-amber-400 text-slate-900 shadow"
                 : "text-slate-400 hover:text-white"
@@ -366,13 +583,14 @@ export default function AdminDashboardView({
           </button>
           <button
             type="button"
+            aria-pressed={activeTab === "notice"}
             onClick={() => {
               setActiveTab("notice");
               setExpandedClass(null);
               setExpandedStudent(null);
             }}
             className={cn(
-              "flex h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-extrabold transition active:scale-[0.98]",
+              "flex min-h-12 items-center justify-center gap-1 rounded-xl px-1 text-sm font-extrabold leading-tight transition active:scale-[0.98]",
               activeTab === "notice"
                 ? "bg-sky-500 text-white shadow"
                 : "text-slate-400 hover:text-white"
@@ -380,6 +598,42 @@ export default function AdminDashboardView({
           >
             <Megaphone className="h-4 w-4" />
             공지사항
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeTab === "foundation"}
+            onClick={() => {
+              setActiveTab("foundation");
+              setExpandedClass(null);
+              setExpandedStudent(null);
+            }}
+            className={cn(
+              "flex min-h-12 items-center justify-center gap-1 rounded-xl px-1 text-sm font-extrabold leading-tight transition active:scale-[0.98]",
+              activeTab === "foundation"
+                ? "bg-emerald-500 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            <FileText className="h-4 w-4" />
+            머릿돌
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeTab === "schedule"}
+            onClick={() => {
+              setActiveTab("schedule");
+              setExpandedClass(null);
+              setExpandedStudent(null);
+            }}
+            className={cn(
+              "flex min-h-12 items-center justify-center gap-1 rounded-xl px-1 text-sm font-extrabold leading-tight transition active:scale-[0.98]",
+              activeTab === "schedule"
+                ? "bg-violet-500 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            <CalendarDays className="h-4 w-4" />
+            계획표
           </button>
         </div>
       </section>
@@ -390,11 +644,34 @@ export default function AdminDashboardView({
           title={noticeTitle}
           content={noticeContent}
           shouldPopup={noticeShouldPopup}
+          weeklyPhotos={weeklyPhotos}
+          weeklyPhotoTitle={weeklyPhotoTitle}
           onTitleChange={setNoticeTitle}
           onContentChange={setNoticeContent}
           onShouldPopupChange={setNoticeShouldPopup}
+          onWeeklyPhotoTitleChange={setWeeklyPhotoTitle}
+          onAddWeeklyPhoto={handleAddWeeklyPhoto}
+          onDeleteWeeklyPhoto={handleDeleteWeeklyPhoto}
           onAdd={handleAddNotice}
           onDelete={handleDeleteNotice}
+        />
+      ) : activeTab === "foundation" ? (
+        <FoundationManager
+          materials={foundationMaterials}
+          title={foundationTitle}
+          onTitleChange={setFoundationTitle}
+          onAdd={handleAddFoundationMaterial}
+          onActivate={handleActivateFoundationMaterial}
+          onDelete={handleDeleteFoundationMaterial}
+        />
+      ) : activeTab === "schedule" ? (
+        <ScheduleManager
+          images={scheduleImages}
+          title={scheduleTitle}
+          onTitleChange={setScheduleTitle}
+          onAdd={handleAddScheduleImage}
+          onActivate={handleActivateScheduleImage}
+          onDelete={handleDeleteScheduleImage}
         />
       ) : (
         <>
@@ -709,9 +986,14 @@ function NoticeManager({
   title,
   content,
   shouldPopup,
+  weeklyPhotos,
+  weeklyPhotoTitle,
   onTitleChange,
   onContentChange,
   onShouldPopupChange,
+  onWeeklyPhotoTitleChange,
+  onAddWeeklyPhoto,
+  onDeleteWeeklyPhoto,
   onAdd,
   onDelete,
 }: {
@@ -719,27 +1001,32 @@ function NoticeManager({
   title: string;
   content: string;
   shouldPopup: boolean;
+  weeklyPhotos: WeeklyPhoto[];
+  weeklyPhotoTitle: string;
   onTitleChange: (value: string) => void;
   onContentChange: (value: string) => void;
   onShouldPopupChange: (value: boolean) => void;
+  onWeeklyPhotoTitleChange: (value: string) => void;
+  onAddWeeklyPhoto: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onDeleteWeeklyPhoto: (photoId: string) => void;
   onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
   onDelete: (noticeId: string) => void;
 }) {
   return (
     <section className="px-5 pt-4">
       <form onSubmit={onAdd} className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-extrabold text-white">새 공지 작성</h2>
             <p className="mt-0.5 text-xs font-bold text-slate-500">공지 글을 추가하면 아래 목록에 최신순으로 표시됩니다.</p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
             <button
               type="button"
               onClick={() => onShouldPopupChange(!shouldPopup)}
               aria-pressed={shouldPopup}
               className={cn(
-                "flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-extrabold shadow transition active:scale-95",
+                "flex h-12 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-extrabold shadow transition active:scale-95",
                 shouldPopup
                   ? "bg-amber-400 text-slate-900 hover:bg-amber-300"
                   : "bg-slate-700 text-slate-400 shadow-none ring-1 ring-slate-600 hover:text-slate-200"
@@ -750,7 +1037,7 @@ function NoticeManager({
             </button>
             <button
               type="submit"
-              className="flex h-10 items-center gap-1.5 rounded-xl bg-sky-500 px-3 text-sm font-extrabold text-white shadow transition hover:bg-sky-400 active:scale-95"
+              className="flex h-12 items-center justify-center gap-1.5 rounded-xl bg-sky-500 px-3 text-sm font-extrabold text-white shadow transition hover:bg-sky-400 active:scale-95"
             >
               <Plus className="h-4 w-4" />
               추가
@@ -762,17 +1049,79 @@ function NoticeManager({
             value={title}
             onChange={(event) => onTitleChange(event.target.value)}
             placeholder="공지 제목"
-            className="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-sky-400"
+            aria-label="공지 제목"
+            className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-sky-400"
           />
           <textarea
             value={content}
             onChange={(event) => onContentChange(event.target.value)}
             placeholder="공지 내용"
+            aria-label="공지 내용"
             rows={4}
-            className="w-full resize-none rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-sm font-bold leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-sky-400"
+            className="w-full resize-none rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base font-bold leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-sky-400"
           />
         </div>
       </form>
+
+      <section className="mt-5 rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-white">이번 주 유치부 사진</h2>
+            <p className="mt-0.5 text-xs font-bold text-slate-500">사진을 추가하면 선생님 시작 화면의 슬라이드에 표시됩니다.</p>
+          </div>
+          <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+            {weeklyPhotos.length}장
+          </span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <input
+            value={weeklyPhotoTitle}
+            onChange={(event) => onWeeklyPhotoTitleChange(event.target.value)}
+            placeholder="사진 제목 또는 설명"
+            aria-label="사진 제목 또는 설명"
+            className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400"
+          />
+          <label className="flex h-12 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-4 text-sm font-extrabold text-white shadow transition hover:bg-emerald-400 active:scale-95 focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-3 focus-within:outline-sky-400">
+            <Upload className="h-4 w-4" />
+            사진 추가
+            <input type="file" accept="image/*" onChange={onAddWeeklyPhoto} className="sr-only" aria-label="이번 주 유치부 사진 파일 선택" />
+          </label>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {weeklyPhotos.length === 0 && (
+            <div className="rounded-2xl bg-slate-900/60 px-4 py-8 text-center ring-1 ring-slate-700/60 sm:col-span-2">
+              <ImageIcon className="mx-auto h-8 w-8 text-slate-600" />
+              <p className="mt-3 text-sm font-extrabold text-slate-400">등록된 사진이 없습니다.</p>
+            </div>
+          )}
+          {weeklyPhotos.map((photo) => (
+            <article key={photo.id} className="overflow-hidden rounded-2xl bg-slate-900/60 ring-1 ring-slate-700/60">
+              <div className="aspect-[4/3] bg-slate-900">
+                <img src={photo.imageUrl} alt={photo.title} className="h-full w-full object-cover" />
+              </div>
+              <div className="p-3">
+                <p className="truncate text-sm font-extrabold text-white">{photo.title}</p>
+                <p className="mt-1 text-[11px] font-bold text-slate-500">
+                  {new Intl.DateTimeFormat("ko-KR", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                  }).format(new Date(photo.createdAt))}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onDeleteWeeklyPhoto(photo.id)}
+                  className="mt-3 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-red-500/10 text-sm font-extrabold text-red-300 ring-1 ring-red-500/25 transition hover:bg-red-500/20 active:scale-95"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  삭제
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="mt-5 flex items-center justify-between">
         <h2 className="text-base font-extrabold text-slate-300">공지 글 목록</h2>
@@ -822,6 +1171,245 @@ function NoticeManager({
             <p className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-slate-900/60 p-3 text-sm font-bold leading-6 text-slate-300 ring-1 ring-slate-700/60">
               {notice.content}
             </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FoundationManager({
+  materials,
+  title,
+  onTitleChange,
+  onAdd,
+  onActivate,
+  onDelete,
+}: {
+  materials: FoundationMaterial[];
+  title: string;
+  onTitleChange: (value: string) => void;
+  onAdd: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onActivate: (materialId: string) => void;
+  onDelete: (materialId: string) => void;
+}) {
+  return (
+    <section className="px-5 pt-4">
+      <section className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-white">머릿돌 PDF 업로드</h2>
+            <p className="mt-0.5 text-xs font-bold leading-5 text-slate-500">
+              PDF를 추가하면 선생님 화면의 머릿돌 탭에서 현재 선택된 자료가 표시됩니다.
+            </p>
+          </div>
+          <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+            {materials.length}개
+          </span>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <input
+            value={title}
+            onChange={(event) => onTitleChange(event.target.value)}
+            placeholder="예: 2026년 5월 4주 머릿돌"
+            aria-label="머릿돌 제목"
+            className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400"
+          />
+          <label className="flex h-12 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-4 text-sm font-extrabold text-white shadow transition hover:bg-emerald-400 active:scale-95 focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-3 focus-within:outline-sky-400">
+            <Upload className="h-4 w-4" />
+            PDF 추가
+            <input type="file" accept="application/pdf" onChange={onAdd} className="sr-only" aria-label="머릿돌 PDF 파일 선택" />
+          </label>
+        </div>
+
+        <p className="mt-3 rounded-xl bg-slate-900/70 px-3 py-2 text-xs font-bold leading-5 text-slate-400 ring-1 ring-slate-700/60">
+          현재는 테스트용으로 브라우저 localStorage에 저장됩니다. 실제 배포에서는 PDF 파일을 서버/스토리지에 올리고 DB에는 파일 URL만 저장하는 방식으로 바꾸는 것이 좋습니다.
+        </p>
+      </section>
+
+      <div className="mt-5 flex items-center justify-between">
+        <h2 className="text-base font-extrabold text-slate-300">등록된 머릿돌</h2>
+        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+          현재 {materials.find((material) => material.isActive)?.title ?? "없음"}
+        </span>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3">
+        {materials.length === 0 && (
+          <div className="rounded-2xl bg-slate-800 px-4 py-10 text-center ring-1 ring-slate-700">
+            <FileText className="mx-auto h-8 w-8 text-slate-600" />
+            <p className="mt-3 text-sm font-extrabold text-slate-400">등록된 머릿돌 PDF가 없습니다.</p>
+          </div>
+        )}
+        {materials.map((material) => (
+          <article key={material.id} className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="break-words text-base font-extrabold text-white">{material.title}</h3>
+                  {material.isActive && (
+                    <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-extrabold text-emerald-300 ring-1 ring-emerald-400/30">
+                      현재 표시 중
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 truncate text-xs font-bold text-slate-500">{material.fileName}</p>
+                <p className="mt-1 text-xs font-bold text-slate-500">
+                  {new Intl.DateTimeFormat("ko-KR", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }).format(new Date(material.createdAt))}
+                </p>
+              </div>
+              <FileText className="h-5 w-5 shrink-0 text-emerald-300" />
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => onActivate(material.id)}
+                disabled={material.isActive}
+                className="flex h-11 items-center justify-center rounded-xl bg-emerald-500/15 px-2 text-xs font-extrabold text-emerald-300 ring-1 ring-emerald-500/25 transition hover:bg-emerald-500/25 active:scale-95 disabled:opacity-50"
+              >
+                활성화
+              </button>
+              <a
+                href={material.pdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-11 items-center justify-center gap-1 rounded-xl bg-slate-900 px-2 text-xs font-extrabold text-slate-300 ring-1 ring-slate-700 transition hover:text-white active:scale-95"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                열기
+              </a>
+              <button
+                type="button"
+                onClick={() => onDelete(material.id)}
+                className="flex h-11 items-center justify-center gap-1 rounded-xl bg-red-500/10 px-2 text-xs font-extrabold text-red-300 ring-1 ring-red-500/25 transition hover:bg-red-500/20 active:scale-95"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                삭제
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ScheduleManager({
+  images,
+  title,
+  onTitleChange,
+  onAdd,
+  onActivate,
+  onDelete,
+}: {
+  images: ScheduleImage[];
+  title: string;
+  onTitleChange: (value: string) => void;
+  onAdd: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onActivate: (imageId: string) => void;
+  onDelete: (imageId: string) => void;
+}) {
+  return (
+    <section className="px-5 pt-4">
+      <section className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-white">계획표 이미지 업로드</h2>
+            <p className="mt-0.5 text-xs font-bold leading-5 text-slate-500">
+              이미지를 추가하면 선생님 화면의 계획표 탭에 현재 선택된 이미지가 표시됩니다.
+            </p>
+          </div>
+          <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+            {images.length}개
+          </span>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <input
+            value={title}
+            onChange={(event) => onTitleChange(event.target.value)}
+            placeholder="예: 2026년 6월 유치부 계획표"
+            aria-label="계획표 제목"
+            className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-violet-400"
+          />
+          <label className="flex h-12 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-violet-500 px-4 text-sm font-extrabold text-white shadow transition hover:bg-violet-400 active:scale-95 focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-3 focus-within:outline-sky-400">
+            <Upload className="h-4 w-4" />
+            이미지 추가
+            <input type="file" accept="image/*" onChange={onAdd} className="sr-only" aria-label="계획표 이미지 파일 선택" />
+          </label>
+        </div>
+
+        <p className="mt-3 rounded-xl bg-slate-900/70 px-3 py-2 text-xs font-bold leading-5 text-slate-400 ring-1 ring-slate-700/60">
+          모바일에서 보기 좋도록 세로형 이미지나 글자가 큰 계획표 이미지를 권장합니다.
+        </p>
+      </section>
+
+      <div className="mt-5 flex items-center justify-between">
+        <h2 className="text-base font-extrabold text-slate-300">등록된 계획표</h2>
+        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+          현재 {images.find((image) => image.isActive)?.title ?? "없음"}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {images.length === 0 && (
+          <div className="rounded-2xl bg-slate-800 px-4 py-10 text-center ring-1 ring-slate-700 sm:col-span-2">
+            <CalendarDays className="mx-auto h-8 w-8 text-slate-600" />
+            <p className="mt-3 text-sm font-extrabold text-slate-400">등록된 계획표 이미지가 없습니다.</p>
+          </div>
+        )}
+        {images.map((image) => (
+          <article key={image.id} className="overflow-hidden rounded-2xl bg-slate-800 ring-1 ring-slate-700">
+            <div className="aspect-[3/4] bg-slate-900">
+              <img src={image.imageUrl} alt={image.title} className="h-full w-full object-contain" />
+            </div>
+            <div className="p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="break-words text-base font-extrabold text-white">{image.title}</h3>
+                {image.isActive && (
+                  <span className="rounded-full bg-violet-400/15 px-2 py-0.5 text-[11px] font-extrabold text-violet-300 ring-1 ring-violet-400/30">
+                    현재 표시 중
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 truncate text-xs font-bold text-slate-500">{image.fileName}</p>
+              <p className="mt-1 text-xs font-bold text-slate-500">
+                {new Intl.DateTimeFormat("ko-KR", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(new Date(image.createdAt))}
+              </p>
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onActivate(image.id)}
+                  disabled={image.isActive}
+                  className="flex h-11 items-center justify-center rounded-xl bg-violet-500/15 px-2 text-xs font-extrabold text-violet-300 ring-1 ring-violet-500/25 transition hover:bg-violet-500/25 active:scale-95 disabled:opacity-50"
+                >
+                  활성화
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(image.id)}
+                  className="flex h-11 items-center justify-center gap-1 rounded-xl bg-red-500/10 px-2 text-xs font-extrabold text-red-300 ring-1 ring-red-500/25 transition hover:bg-red-500/20 active:scale-95"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  삭제
+                </button>
+              </div>
+            </div>
           </article>
         ))}
       </div>

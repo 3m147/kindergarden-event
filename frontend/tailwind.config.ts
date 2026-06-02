@@ -8,23 +8,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // 유치부 파스텔 팔레트
+        // 교사용 운영 화면 팔레트: 차분한 업무용 톤을 기본으로 사용
         pastel: {
-          yellow: "#FFF4B8",
-          yellowDeep: "#F7C948",
-          green:  "#CDEFC4",
-          greenDeep: "#5FB96A",
-          blue:   "#CDE7FB",
-          blueDeep: "#5AA7E6",
-          pink:   "#FCD5E0",
-          cream:  "#FFFBEF",
+          yellow: "#FEF3C7",
+          yellowDeep: "#B45309",
+          green:  "#D1FAE5",
+          greenDeep: "#047857",
+          blue:   "#DBEAFE",
+          blueDeep: "#2563EB",
+          pink:   "#FEE2E2",
+          cream:  "#F8FAFC",
         },
       },
       fontFamily: {
         sans: ["Pretendard", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        soft: "0 8px 24px rgba(90, 120, 160, 0.12)",
+        soft: "0 10px 30px rgba(15, 23, 42, 0.10)",
       },
       // "완료" 로 초록 체크가 프로필에 박힐 때 짧게 튀어나오는 팝 효과
       keyframes: {

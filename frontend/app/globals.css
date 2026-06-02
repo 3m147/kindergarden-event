@@ -16,7 +16,7 @@ html {
 html,
 body {
   min-height: 100dvh;
-  background-color: #FFFBEF; /* pastel.cream */
+  background-color: #F8FAFC; /* teacher workspace background */
 }
 
 body {
@@ -24,6 +24,31 @@ body {
   overscroll-behavior-y: contain;
   /* 터치 시 파란색 플래시 제거 — 커스텀 active 스타일이 더 잘 보이게 */
   -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  /* iOS Safari 에서 입력 포커스 시 자동 확대되는 현상 방지 */
+  font-size: 16px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
 }
 
 /* 인터랙션 요소의 모바일 기본 동작 정리:
@@ -41,4 +66,15 @@ button,
 /* 프로필 사진을 길게 눌렀을 때 드래그 프리뷰가 뜨지 않도록 */
 img {
   -webkit-user-drag: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
