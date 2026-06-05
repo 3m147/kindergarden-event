@@ -10,12 +10,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2, Image as ImageIcon, Upload, FileText, ExternalLink, CalendarDays } from "lucide-react";
+import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2, Image as ImageIcon, Upload, FileText, ExternalLink, CalendarDays, PlayCircle } from "lucide-react";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 import { readAdminNotices, writeAdminNotices, type AdminNotice } from "@/lib/notices";
 import { readWeeklyPhotos, writeWeeklyPhotos, type WeeklyPhoto } from "@/lib/weeklyPhotos";
 import { readFoundationMaterials, writeFoundationMaterials, type FoundationMaterial } from "@/lib/foundationMaterials";
 import { readScheduleImages, writeScheduleImages, type ScheduleImage } from "@/lib/scheduleImages";
+import { extractYoutubeVideoId, readLessonVideos, writeLessonVideos, type LessonVideo } from "@/lib/lessonVideos";
 
 const TOTAL_RECITATIONS = 16;
 const TOTAL_QUIZZES = 18;
@@ -115,7 +116,7 @@ export default function AdminDashboardView({
   const router = useRouter();
   const [authenticated, setAuthenticated] = React.useState(false);
   const [mode, setMode] = React.useState<"festival" | "kindergarten">(initialMode);
-  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice" | "schedule" | "foundation">(initialMode);
+  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice" | "schedule" | "foundation" | "lesson">(initialMode);
   const [expandedClass, setExpandedClass] = React.useState<number | null>(null);
   const [expandedStudent, setExpandedStudent] = React.useState<number | null>(null);
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
@@ -132,6 +133,10 @@ export default function AdminDashboardView({
   const [foundationTitle, setFoundationTitle] = React.useState("");
   const [scheduleImages, setScheduleImages] = React.useState<ScheduleImage[]>([]);
   const [scheduleTitle, setScheduleTitle] = React.useState("");
+  const [lessonVideos, setLessonVideos] = React.useState<LessonVideo[]>([]);
+  const [lessonVideoTitle, setLessonVideoTitle] = React.useState("");
+  const [lessonVideoUrl, setLessonVideoUrl] = React.useState("");
+  const [lessonVideoDescription, setLessonVideoDescription] = React.useState("");
 
   const [subTab, setSubTab] = React.useState<"check" | "chart">("check");
   const [selectedBookId, setSelectedBookId] = React.useState(1);
@@ -212,11 +217,13 @@ export default function AdminDashboardView({
       setWeeklyPhotos(readWeeklyPhotos());
       setFoundationMaterials(readFoundationMaterials());
       setScheduleImages(readScheduleImages());
+      setLessonVideos(readLessonVideos());
     } catch {
       setNotices([]);
       setWeeklyPhotos([]);
       setFoundationMaterials([]);
       setScheduleImages([]);
+      setLessonVideos([]);
     }
     loadScores();
   }, [loadScores, router]);
@@ -474,6 +481,48 @@ export default function AdminDashboardView({
     setToast({ kind: "success", text: "계획표 이미지를 삭제했습니다." });
   };
 
+  const saveLessonVideos = (nextVideos: LessonVideo[]) => {
+    writeLessonVideos(nextVideos);
+    setLessonVideos(nextVideos);
+  };
+
+  const handleAddLessonVideo = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = lessonVideoTitle.trim();
+    const url = lessonVideoUrl.trim();
+    const videoId = extractYoutubeVideoId(url);
+
+    if (!title || !url) {
+      setToast({ kind: "error", text: "공과 제목과 유튜브 링크를 입력해 주세요." });
+      return;
+    }
+
+    if (!videoId) {
+      setToast({ kind: "error", text: "유효한 유튜브 링크 또는 영상 ID를 입력해 주세요." });
+      return;
+    }
+
+    const nextVideo: LessonVideo = {
+      id: `${Date.now()}`,
+      title,
+      url,
+      videoId,
+      description: lessonVideoDescription.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    saveLessonVideos([nextVideo, ...lessonVideos]);
+    setLessonVideoTitle("");
+    setLessonVideoUrl("");
+    setLessonVideoDescription("");
+    setToast({ kind: "success", text: "공과 영상을 추가했습니다." });
+  };
+
+  const handleDeleteLessonVideo = (videoId: string) => {
+    saveLessonVideos(lessonVideos.filter((video) => video.id !== videoId));
+    setToast({ kind: "success", text: "공과 영상을 삭제했습니다." });
+  };
+
   if (!authenticated) return null;
 
   const submittedOnly = students.filter((s) => s.submitted);
@@ -489,8 +538,8 @@ export default function AdminDashboardView({
   const totalStudents = students.length;
   const submittedStudents = submittedOnly.length;
   const visibleClasses = classIds.length;
-  const screenTitle = activeTab === "notice" ? "공지사항 관리" : activeTab === "schedule" ? "계획표 관리" : activeTab === "foundation" ? "머릿돌 관리" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
-  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : activeTab === "schedule" ? "선생님 화면에 표시할 계획표 이미지 업로드 · 선택" : activeTab === "foundation" ? "선생님 화면에 표시할 PDF 업로드 · 선택" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
+  const screenTitle = activeTab === "notice" ? "공지사항 관리" : activeTab === "schedule" ? "계획표 관리" : activeTab === "foundation" ? "머릿돌 관리" : activeTab === "lesson" ? "공과 영상 관리" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
+  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : activeTab === "schedule" ? "선생님 화면에 표시할 계획표 이미지 업로드 · 선택" : activeTab === "foundation" ? "선생님 화면에 표시할 PDF 업로드 · 선택" : activeTab === "lesson" ? "선생님이 다시 볼 수 있는 유튜브 공과 링크 관리" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-[max(env(safe-area-inset-bottom),2rem)]">
@@ -513,7 +562,7 @@ export default function AdminDashboardView({
               disabled={refreshing}
               className={cn(
                 "flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-300 ring-1 ring-slate-700 transition hover:text-white active:scale-95 disabled:opacity-60",
-                (activeTab === "notice" || activeTab === "schedule" || activeTab === "foundation") && "hidden sm:flex"
+                (activeTab === "notice" || activeTab === "schedule" || activeTab === "foundation" || activeTab === "lesson") && "hidden sm:flex"
               )}
               aria-label="현황 새로고침"
             >
@@ -542,7 +591,7 @@ export default function AdminDashboardView({
 
       {/* 화면 선택 */}
       <section className="px-5 pt-2">
-        <div className="grid grid-cols-5 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700" aria-label="관리자 화면 선택">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700 sm:grid-cols-6" aria-label="관리자 화면 선택">
           <button
             type="button"
             aria-pressed={activeTab === "kindergarten"}
@@ -635,6 +684,24 @@ export default function AdminDashboardView({
             <CalendarDays className="h-4 w-4" />
             계획표
           </button>
+          <button
+            type="button"
+            aria-pressed={activeTab === "lesson"}
+            onClick={() => {
+              setActiveTab("lesson");
+              setExpandedClass(null);
+              setExpandedStudent(null);
+            }}
+            className={cn(
+              "flex min-h-12 items-center justify-center gap-1 rounded-xl px-1 text-sm font-extrabold leading-tight transition active:scale-[0.98]",
+              activeTab === "lesson"
+                ? "bg-rose-500 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            <PlayCircle className="h-4 w-4" />
+            공과
+          </button>
         </div>
       </section>
 
@@ -672,6 +739,18 @@ export default function AdminDashboardView({
           onAdd={handleAddScheduleImage}
           onActivate={handleActivateScheduleImage}
           onDelete={handleDeleteScheduleImage}
+        />
+      ) : activeTab === "lesson" ? (
+        <LessonVideoManager
+          videos={lessonVideos}
+          title={lessonVideoTitle}
+          url={lessonVideoUrl}
+          description={lessonVideoDescription}
+          onTitleChange={setLessonVideoTitle}
+          onUrlChange={setLessonVideoUrl}
+          onDescriptionChange={setLessonVideoDescription}
+          onAdd={handleAddLessonVideo}
+          onDelete={handleDeleteLessonVideo}
         />
       ) : (
         <>
@@ -1403,6 +1482,139 @@ function ScheduleManager({
                 <button
                   type="button"
                   onClick={() => onDelete(image.id)}
+                  className="flex h-11 items-center justify-center gap-1 rounded-xl bg-red-500/10 px-2 text-xs font-extrabold text-red-300 ring-1 ring-red-500/25 transition hover:bg-red-500/20 active:scale-95"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  삭제
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LessonVideoManager({
+  videos,
+  title,
+  url,
+  description,
+  onTitleChange,
+  onUrlChange,
+  onDescriptionChange,
+  onAdd,
+  onDelete,
+}: {
+  videos: LessonVideo[];
+  title: string;
+  url: string;
+  description: string;
+  onTitleChange: (value: string) => void;
+  onUrlChange: (value: string) => void;
+  onDescriptionChange: (value: string) => void;
+  onAdd: (event: React.FormEvent<HTMLFormElement>) => void;
+  onDelete: (videoId: string) => void;
+}) {
+  return (
+    <section className="px-5 pt-4">
+      <form onSubmit={onAdd} className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-white">공과 영상 링크 추가</h2>
+            <p className="mt-0.5 text-xs font-bold leading-5 text-slate-500">
+              유튜브 링크를 추가하면 선생님 화면의 공과 자료실에서 언제든 다시 볼 수 있습니다.
+            </p>
+          </div>
+          <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+            {videos.length}개
+          </span>
+        </div>
+
+        <div className="grid gap-2">
+          <input
+            value={title}
+            onChange={(event) => onTitleChange(event.target.value)}
+            placeholder="예: 6월 1주차 공과 - 보이지 않는 하나님"
+            aria-label="공과 제목"
+            className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-rose-400"
+          />
+          <input
+            value={url}
+            onChange={(event) => onUrlChange(event.target.value)}
+            placeholder="유튜브 링크 또는 영상 ID"
+            aria-label="유튜브 링크 또는 영상 ID"
+            className="h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-rose-400"
+          />
+          <textarea
+            value={description}
+            onChange={(event) => onDescriptionChange(event.target.value)}
+            placeholder="설명 또는 메모"
+            aria-label="공과 설명"
+            rows={3}
+            className="w-full resize-none rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base font-bold leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-rose-400"
+          />
+          <button
+            type="submit"
+            className="flex h-12 items-center justify-center gap-1.5 rounded-xl bg-rose-500 px-4 text-sm font-extrabold text-white shadow transition hover:bg-rose-400 active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            공과 추가
+          </button>
+        </div>
+      </form>
+
+      <div className="mt-5 flex items-center justify-between">
+        <h2 className="text-base font-extrabold text-slate-300">등록된 공과 영상</h2>
+        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+          {videos.length}개
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {videos.length === 0 && (
+          <div className="rounded-2xl bg-slate-800 px-4 py-10 text-center ring-1 ring-slate-700 sm:col-span-2">
+            <PlayCircle className="mx-auto h-8 w-8 text-slate-600" />
+            <p className="mt-3 text-sm font-extrabold text-slate-400">등록된 공과 영상이 없습니다.</p>
+          </div>
+        )}
+        {videos.map((video) => (
+          <article key={video.id} className="overflow-hidden rounded-2xl bg-slate-800 ring-1 ring-slate-700">
+            <div className="aspect-video bg-slate-900">
+              <img
+                src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
+                alt={`${video.title} 썸네일`}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="p-4">
+              <h3 className="break-words text-base font-extrabold text-white">{video.title}</h3>
+              {video.description && (
+                <p className="mt-2 line-clamp-2 whitespace-pre-wrap break-words text-sm font-bold leading-6 text-slate-400">
+                  {video.description}
+                </p>
+              )}
+              <p className="mt-2 text-xs font-bold text-slate-500">
+                {new Intl.DateTimeFormat("ko-KR", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                }).format(new Date(video.createdAt))}
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <a
+                  href={`https://www.youtube.com/watch?v=${video.videoId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-11 items-center justify-center gap-1 rounded-xl bg-slate-900 px-2 text-xs font-extrabold text-slate-300 ring-1 ring-slate-700 transition hover:text-white active:scale-95"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  열기
+                </a>
+                <button
+                  type="button"
+                  onClick={() => onDelete(video.id)}
                   className="flex h-11 items-center justify-center gap-1 rounded-xl bg-red-500/10 px-2 text-xs font-extrabold text-red-300 ring-1 ring-red-500/25 transition hover:bg-red-500/20 active:scale-95"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

@@ -1,8 +1,12 @@
 package com.kindergarden.recitation.controller;
 
 import com.kindergarden.recitation.dto.ClassDto;
+import com.kindergarden.recitation.dto.CreateStudentRequest;
 import com.kindergarden.recitation.dto.StudentRecitationDto;
 import com.kindergarden.recitation.dto.ToggleRequest;
+import com.kindergarden.recitation.dto.UpdateStudentRequest;
+import com.kindergarden.recitation.dto.UpdateTeacherRequest;
+import com.kindergarden.recitation.dto.PersonProfileDto;
 import com.kindergarden.recitation.service.RecitationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -33,6 +37,28 @@ public class RecitationController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return service.getClassStatus(classId, date != null ? date : LocalDate.now());
+    }
+
+    // 교사: 담당 반에 학생 추가
+    @PostMapping("/classes/{classId}/students")
+    public StudentRecitationDto createStudent(
+            @PathVariable Long classId,
+            @RequestBody CreateStudentRequest body) {
+        return service.createStudent(classId, body.name(), body.birthDate(), body.parentName());
+    }
+
+    @PutMapping("/teachers/{teacherId}")
+    public PersonProfileDto updateTeacher(
+            @PathVariable Long teacherId,
+            @RequestBody UpdateTeacherRequest body) {
+        return service.updateTeacher(teacherId, body.name());
+    }
+
+    @PutMapping("/students/{studentId}")
+    public PersonProfileDto updateStudent(
+            @PathVariable Long studentId,
+            @RequestBody UpdateStudentRequest body) {
+        return service.updateStudent(studentId, body.name(), body.birthDate(), body.parentName());
     }
 
     // 학생의 과별 암송/퀴즈 토글

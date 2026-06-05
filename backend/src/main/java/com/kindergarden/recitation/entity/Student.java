@@ -3,6 +3,7 @@ package com.kindergarden.recitation.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,6 +22,12 @@ public class Student {
 
     @Column(name = "photo_url", length = 500)
     private String photoUrl;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @Column(name = "parent_name", length = 50)
+    private String parentName;
 
     // 학생 N : 반 1
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

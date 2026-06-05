@@ -1,5 +1,7 @@
 package com.kindergarden.recitation.dto;
 
+import java.time.LocalDate;
+
 public record PersonProfileDto(
     Long id,
     String name,
@@ -7,5 +9,7 @@ public record PersonProfileDto(
     String className,
     Long classId,
     String role,
-    String photoUrl
+    String photoUrl,
+    LocalDate birthDate,
+    String parentName
 ) {}

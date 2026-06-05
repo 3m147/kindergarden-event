@@ -22,6 +22,8 @@ type Person = {
   className: string;
   classId: number;
   role?: string; // 교사만
+  birthDate?: string;
+  parentName?: string;
 };
 
 function getStorageKey(type: string, id: number) {
@@ -311,6 +313,12 @@ export default function AdminProfileManager() {
                               <p className="text-sm font-bold text-white">{person.name}</p>
                               {person.role && (
                                 <p className="text-[10px] font-bold text-amber-400">{person.role}</p>
+                              )}
+                              {person.type === "student" && (
+                                <div className="mt-1 grid gap-0.5 text-[10px] font-bold text-slate-400">
+                                  <p>{person.birthDate ? `생년월일 ${person.birthDate}` : "생년월일 미등록"}</p>
+                                  <p>{person.parentName ? `부모님 ${person.parentName}` : "부모님 성함 미등록"}</p>
+                                </div>
                               )}
                             </div>
 

@@ -36,6 +36,7 @@ const TOTAL_KINDERGARTEN_LESSONS = 52;
 const TOTAL_KINDERGARTEN_ACTIVITIES = TOTAL_KINDERGARTEN_LESSONS * 3;
 const KINDERGARTEN_BASE_UNLOCK_LESSON = 19;
 const KINDERGARTEN_BASE_UNLOCK_DATE = new Date(2026, 4, 10);
+const TEACHER_DARK_MODE_KEY = "teacher_dark_mode";
 type ToggleState = "success" | "fail" | undefined;
 
 function nextToggleState(current: ToggleState): ToggleState {
@@ -79,6 +80,10 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
 
   React.useEffect(() => {
     const info = localStorage.getItem("teacher_info");
+    const darkMode = localStorage.getItem(TEACHER_DARK_MODE_KEY) === "true";
+    document.documentElement.classList.toggle("dark", darkMode);
+    document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
+
     if (info) {
       setTeacherInfo(JSON.parse(info));
     } else {
@@ -383,17 +388,17 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
   };
 
   return (
-    <main className="relative mx-auto min-h-[100dvh] w-full max-w-md overflow-hidden bg-pastel-cream pb-[calc(max(env(safe-area-inset-bottom),1rem)+9.75rem)]">
+    <main className="relative mx-auto min-h-[100dvh] w-full max-w-md overflow-hidden bg-slate-100 pb-[calc(max(env(safe-area-inset-bottom),1rem)+9.75rem)] text-slate-900 dark:bg-[#0b1120] dark:text-slate-100">
 
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-5 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)] backdrop-blur" aria-label="유치부 체크 헤더">
-        <div className="relative flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2.5">
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 px-5 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)] backdrop-blur-xl dark:border-slate-800 dark:bg-[#0b1120]/90" aria-label="유치부 체크 헤더">
+        <div className="relative flex items-center justify-between gap-3 rounded-2xl bg-white/80 px-3 py-2.5 ring-1 ring-slate-200/70 dark:bg-slate-900/70 dark:ring-slate-800">
           <button
             type="button"
             onClick={() => openStartTab("info")}
             className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl text-left transition active:scale-[0.99]"
             aria-label="내 정보로 이동"
           >
-            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border-2 border-white bg-white shadow-sm">
+            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border-2 border-white bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
               {teacherInfo ? (
                 <StudentAvatar name={teacherInfo.name} photoUrl={teacherInfo.photoUrl} />
               ) : (
@@ -401,10 +406,10 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
               )}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-extrabold text-slate-800">
+              <p className="truncate text-sm font-extrabold text-slate-800 dark:text-slate-100">
                 {teacherInfo ? `${teacherInfo.name} 선생님` : "선생님"}
               </p>
-              <p className="mt-0.5 truncate text-xs font-bold text-slate-500">
+              <p className="mt-0.5 truncate text-xs font-bold text-slate-500 dark:text-slate-400">
                 {className} · {screenTitle}
               </p>
             </div>
@@ -414,7 +419,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
               type="button"
               onClick={() => loadStudents(true)}
               disabled={refreshing}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition hover:text-slate-800 active:scale-95 disabled:opacity-60"
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition hover:text-slate-800 active:scale-95 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
               aria-label="학생 목록 새로고침"
             >
               <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
@@ -422,27 +427,27 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
             <button
               type="button"
               onClick={handleBackToModeSelect}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition hover:text-slate-800 active:scale-95"
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition hover:text-slate-800 active:scale-95 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
               aria-label="홈으로 이동"
             >
               <Home className="h-5 w-5" />
             </button>
           </div>
         </div>
-        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="flex items-center gap-1 text-[11px] font-extrabold text-slate-500">
+              <p className="flex items-center gap-1 text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
                 <Sun className="h-3.5 w-3.5" />
                 {todayLabel()}
               </p>
-              <h1 className="mt-1 truncate text-lg font-extrabold text-slate-800">{screenTitle}</h1>
+              <h1 className="mt-1 truncate text-lg font-extrabold text-slate-800 dark:text-white">{screenTitle}</h1>
             </div>
-            <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-extrabold text-slate-700 ring-1 ring-slate-200">
+            <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-extrabold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
               {screenSubtitle}
             </span>
           </div>
-          <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
+          <p className="mt-2 text-xs font-bold leading-5 text-slate-500 dark:text-slate-400">
             학생을 눌러 출석 · 머릿돌 · 암송 상태를 체크하세요.
           </p>
         </div>
@@ -451,12 +456,12 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
       {/* 학생 프로필 그리드 */}
       <section className="relative mt-4 px-4 sm:mt-5 sm:px-5" aria-label="학생 선택">
         {students.length === 0 ? (
-          <div className="rounded-2xl bg-white p-10 text-center shadow-soft ring-1 ring-slate-200">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+          <div className="rounded-2xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
               <User className="h-7 w-7" />
             </div>
-            <p className="text-sm font-bold text-slate-600">이 반의 학생 정보가 아직 없어요</p>
-            <p className="mt-1 text-xs text-slate-400">관리자에게 학생 등록을 요청해 주세요</p>
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-300">이 반의 학생 정보가 아직 없어요</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">내 정보에서 아이를 추가할 수 있어요</p>
           </div>
         ) : (
           <ul className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -478,7 +483,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
 
       {/* 하단 고정 진행률 바 */}
       <nav
-        className="fixed inset-x-0 bottom-[calc(max(env(safe-area-inset-bottom),0.75rem)+4.75rem)] z-30 mx-auto w-full max-w-md border-t border-slate-200 bg-white/95 px-5 pb-3 pt-4 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur"
+        className="fixed inset-x-0 bottom-[calc(max(env(safe-area-inset-bottom),0.75rem)+4.75rem)] z-30 mx-auto w-full max-w-md border-t border-slate-200 bg-white/90 px-5 pb-3 pt-4 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-[#0b1120]/92"
         aria-label="진행률 영역"
       >
         {mode === "kindergarten" ? (
@@ -634,7 +639,7 @@ function TeacherCheckBottomNavigation({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md border-t border-slate-200 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md border-t border-slate-200 bg-white/90 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-[#0b1120]/92"
       aria-label="하단 메뉴"
     >
       <div className="grid grid-cols-5 gap-1">
@@ -649,8 +654,8 @@ function TeacherCheckBottomNavigation({
               className={cn(
                 "flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-extrabold transition active:scale-95",
                 item.active
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950"
+                  : "text-slate-400 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-slate-200"
               )}
             >
               <Icon className="h-5 w-5" />
@@ -699,26 +704,26 @@ function ConfirmDialog({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-soft">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-soft dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
           <AlertCircle className="h-7 w-7" />
         </div>
-        <h2 className="text-center text-lg font-extrabold text-slate-800">{title}</h2>
-        <p className="mt-2 whitespace-pre-line text-center text-sm text-slate-500">
+        <h2 className="text-center text-lg font-extrabold text-slate-800 dark:text-slate-100">{title}</h2>
+        <p className="mt-2 whitespace-pre-line text-center text-sm text-slate-500 dark:text-slate-400">
           {description}
         </p>
         <div className="mt-5 flex gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="h-12 flex-1 rounded-xl bg-slate-100 text-base font-extrabold text-slate-600 transition active:scale-[0.98]"
+            className="h-12 flex-1 rounded-xl bg-slate-100 text-base font-extrabold text-slate-600 transition active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
           >
             {cancelText}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="h-12 flex-1 rounded-xl bg-slate-900 text-base font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+            className="h-12 flex-1 rounded-xl bg-slate-900 text-base font-extrabold text-white shadow-soft transition active:scale-[0.98] dark:bg-white dark:text-slate-950"
           >
             {confirmText}
           </button>
@@ -765,13 +770,13 @@ function StudentTile({
         aria-label={`${student.name} 과 선택 열기`}
         disabled={mode === "festival" && student.submitted}
         className={cn(
-          "group relative flex w-full flex-col items-center gap-1.5 overflow-hidden rounded-2xl p-2 shadow-sm ring-1 ring-slate-200 transition sm:gap-2 sm:p-3",
+          "group relative flex w-full flex-col items-center gap-1.5 overflow-hidden rounded-2xl p-2 shadow-sm ring-1 ring-slate-200 transition sm:gap-2 sm:p-3 dark:ring-slate-800",
           "active:scale-95 disabled:opacity-60",
           allDone
-            ? "bg-emerald-50"
+            ? "bg-emerald-50 dark:bg-emerald-950/35"
             : mode === "festival" && student.submitted
-              ? "bg-slate-50"
-              : "bg-white",
+              ? "bg-slate-50 dark:bg-slate-800"
+              : "bg-white dark:bg-slate-900",
           active && "ring-4 ring-blue-500/20"
         )}
       >
@@ -782,7 +787,7 @@ function StudentTile({
         )}
         <div
           className={cn(
-            "relative h-16 w-16 overflow-hidden rounded-full border-[4px] bg-white transition-colors sm:h-20 sm:w-20",
+            "relative h-16 w-16 overflow-hidden rounded-full border-[4px] bg-white transition-colors sm:h-20 sm:w-20 dark:bg-slate-800",
             allDone ? "border-pastel-greenDeep" : done || kindergartenDone ? "border-pastel-greenDeep/60" : quizDone ? "border-pastel-blueDeep/60" : "border-white"
           )}
         >
@@ -794,25 +799,25 @@ function StudentTile({
           )}
         </div>
         <div className="flex flex-col items-center">
-          <span className="text-xs font-extrabold text-slate-800 sm:text-sm">{student.name}</span>
+          <span className="text-xs font-extrabold text-slate-800 sm:text-sm dark:text-slate-100">{student.name}</span>
           <div className="mt-0.5 flex items-center gap-1">
             {mode === "kindergarten" ? (
               kindergartenDone ? (
-                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800 ring-1 ring-emerald-100 sm:text-[11px]">완료 {kindergartenScore}</span>
+                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800 ring-1 ring-emerald-100 sm:text-[11px] dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800">완료 {kindergartenScore}</span>
               ) : kindergartenCount > 0 ? (
-                <span className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 sm:text-[11px]">{kindergartenCount}/{TOTAL_KINDERGARTEN_ACTIVITIES}</span>
+                <span className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 sm:text-[11px] dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">{kindergartenCount}/{TOTAL_KINDERGARTEN_ACTIVITIES}</span>
               ) : null
             ) : (
               <>
                 {done ? (
-                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800 ring-1 ring-emerald-100 sm:text-[11px]">암송 {score}</span>
+                  <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800 ring-1 ring-emerald-100 sm:text-[11px] dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800">암송 {score}</span>
                 ) : recitationCount > 0 ? (
-                  <span className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 sm:text-[11px]">암송 {recitationCount}/{TOTAL_RECITATIONS}</span>
+                  <span className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 sm:text-[11px] dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">암송 {recitationCount}/{TOTAL_RECITATIONS}</span>
                 ) : null}
                 {quizDone ? (
-                  <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-extrabold text-sky-800 ring-1 ring-sky-100 sm:text-[11px]">퀴즈 {quizScore}</span>
+                  <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-extrabold text-sky-800 ring-1 ring-sky-100 sm:text-[11px] dark:bg-sky-950/60 dark:text-sky-200 dark:ring-sky-800">퀴즈 {quizScore}</span>
                 ) : quizCount > 0 ? (
-                  <span className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 sm:text-[11px]">퀴즈 {quizCount}/{TOTAL_QUIZZES}</span>
+                  <span className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 sm:text-[11px] dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">퀴즈 {quizCount}/{TOTAL_QUIZZES}</span>
                 ) : null}
               </>
             )}
@@ -824,7 +829,7 @@ function StudentTile({
           type="button"
           onClick={onSubmit}
           disabled
-          className="h-9 rounded-xl bg-white/80 text-[11px] font-extrabold text-slate-400 shadow-sm ring-1 ring-slate-200 disabled:active:scale-100"
+          className="h-9 rounded-xl bg-white/80 text-[11px] font-extrabold text-slate-400 shadow-sm ring-1 ring-slate-200 disabled:active:scale-100 dark:bg-slate-800/80 dark:text-slate-500 dark:ring-slate-700"
         >
           {student.submitted ? "✓ 제출됨" : submitting ? "제출 중..." : canSubmit ? "최종 제출 비활성화" : "최종 제출"}
         </button>
@@ -882,18 +887,18 @@ function StudentLessonModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-soft">
+      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-soft dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
         {/* 시트 핸들 */}
         <div className="flex shrink-0 justify-center pb-1 pt-3">
-          <span className="h-1.5 w-12 rounded-full bg-slate-200" />
+          <span className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700" />
         </div>
 
         {/* 학생 프로필 + 이름 */}
-        <header className="flex shrink-0 items-center gap-3 bg-slate-50 px-5 pb-4 pt-3 ring-1 ring-slate-100">
+        <header className="flex shrink-0 items-center gap-3 bg-slate-50 px-5 pb-4 pt-3 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:ring-slate-700">
           <div className="relative shrink-0">
             <div className={cn(
-              "relative h-14 w-14 overflow-hidden rounded-full border-[4px] bg-white transition-colors",
-              done ? "border-pastel-greenDeep" : "border-white"
+              "relative h-14 w-14 overflow-hidden rounded-full border-[4px] bg-white transition-colors dark:bg-slate-800",
+              done ? "border-pastel-greenDeep" : "border-white dark:border-slate-700"
             )}>
               <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
               {done && (
@@ -906,11 +911,11 @@ function StudentLessonModal({
           <div className="min-w-0">
             <p
               id="lesson-modal-title"
-              className="truncate text-xl font-extrabold text-slate-800"
+              className="truncate text-xl font-extrabold text-slate-800 dark:text-slate-100"
             >
               {student.name}
             </p>
-            <p className="text-xs text-slate-500">탭할 때마다 <b>성공 → 실패 → 미정</b> 순</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">탭할 때마다 <b>성공 → 실패 → 미정</b> 순</p>
           </div>
         </header>
 
@@ -934,7 +939,7 @@ function StudentLessonModal({
                       ? "bg-pastel-greenDeep text-white shadow-soft"
                       : state === 'fail'
                         ? "bg-red-400 text-white shadow-soft"
-                        : "bg-slate-50 text-slate-700 ring-1 ring-slate-200"
+                        : "bg-slate-50 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
                   )}
                 >
                   {n}과
@@ -943,18 +948,18 @@ function StudentLessonModal({
             })}
           </div>
           {Object.keys(states).length > 0 && (
-            <p className="mt-3 text-center text-sm text-slate-500">
+            <p className="mt-3 text-center text-sm text-slate-500 dark:text-slate-400">
               성공: {formatLessons(states) || '실패'}
             </p>
           )}
         </div>
 
         {/* 하단 버튼 */}
-        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
+        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 dark:border-slate-800">
           <button
             type="button"
             onClick={onBack}
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 shadow-soft transition active:scale-[0.98]"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 shadow-soft transition active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
             aria-label="뒤로 가기"
           >
             <ArrowLeft className="h-6 w-6" />
@@ -962,7 +967,7 @@ function StudentLessonModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-14 flex-1 rounded-xl bg-slate-900 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+            className="h-14 flex-1 rounded-xl bg-slate-900 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98] dark:bg-white dark:text-slate-950"
           >
             확인
           </button>
@@ -1096,15 +1101,15 @@ function StudentKindergartenModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative mx-auto flex h-[76dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-soft">
+      <div className="relative mx-auto flex h-[76dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-soft dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
         <div className="flex shrink-0 justify-center pb-1 pt-3">
-          <span className="h-1.5 w-12 rounded-full bg-slate-200" />
+          <span className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700" />
         </div>
 
-        <header className="shrink-0 bg-slate-50 px-5 pb-3 pt-2 ring-1 ring-slate-100">
+        <header className="shrink-0 bg-slate-50 px-5 pb-3 pt-2 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:ring-slate-700">
           <div className="flex items-center gap-3">
             <div className="relative shrink-0">
-              <div className="h-14 w-14 overflow-hidden rounded-full border-[4px] border-white bg-white shadow-soft">
+              <div className="h-14 w-14 overflow-hidden rounded-full border-[4px] border-white bg-white shadow-soft dark:border-slate-700 dark:bg-slate-800">
                 <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
               </div>
               <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 text-white shadow-sm">
@@ -1117,17 +1122,17 @@ function StudentKindergartenModal({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p id="kindergarten-modal-title" className="truncate text-xl font-extrabold text-slate-800">
+              <p id="kindergarten-modal-title" className="truncate text-xl font-extrabold text-slate-800 dark:text-slate-100">
                 과별 활동 체크
               </p>
-              <p className="mt-0.5 text-xs font-bold text-slate-500">
+              <p className="mt-0.5 text-xs font-bold text-slate-500 dark:text-slate-400">
                 {student.name} · {student.className}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition active:scale-95"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition active:scale-95 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700"
               aria-label="활동 체크 닫기"
             >
               <X className="h-5 w-5" />
@@ -1136,16 +1141,16 @@ function StudentKindergartenModal({
         </header>
 
         <div className="shrink-0 px-5 pb-3">
-          <div className="mb-3 rounded-2xl bg-slate-50 p-3 shadow-sm ring-1 ring-slate-200">
+          <div className="mb-3 rounded-2xl bg-slate-50 p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800/70 dark:ring-slate-700">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[11px] font-extrabold tracking-[0.08em] text-slate-500">
+                <p className="text-[11px] font-extrabold tracking-[0.08em] text-slate-500 dark:text-slate-400">
                   이번 주 체크
                 </p>
-                <p className="mt-1 truncate text-sm font-extrabold text-slate-800">
+                <p className="mt-1 truncate text-sm font-extrabold text-slate-800 dark:text-slate-100">
                   {weeklyLesson}과: {LESSON_TITLES[weeklyLesson]}
                 </p>
-                <p className="mt-1 text-[11px] font-bold text-slate-500">
+                <p className="mt-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   {weeklySelectedCount}/3 완료
                 </p>
               </div>
@@ -1169,7 +1174,7 @@ function StudentKindergartenModal({
                       selected && activity.color === "yellow" && "bg-amber-600 text-white",
                       selected && activity.color === "green" && "bg-pastel-greenDeep text-white",
                       selected && activity.color === "blue" && "bg-pastel-blueDeep text-white",
-                      !selected && "bg-white text-slate-600 ring-1 ring-slate-200"
+                      !selected && "bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700"
                     )}
                   >
                     {activity.label}
@@ -1179,7 +1184,7 @@ function StudentKindergartenModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-1 rounded-2xl bg-slate-100 p-1">
+          <div className="grid grid-cols-4 gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
             {KINDERGARTEN_BOOKS.map((book) => {
               const active = selectedBook.id === book.id;
               return (
@@ -1190,8 +1195,8 @@ function StudentKindergartenModal({
                   className={cn(
                     "h-10 min-w-0 rounded-xl px-1 text-center text-[11px] font-extrabold transition active:scale-95 sm:text-xs",
                     active
-                      ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
-                      : "text-slate-500"
+                      ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:text-white dark:ring-slate-700"
+                      : "text-slate-500 dark:text-slate-400"
                   )}
                 >
                   {book.title}
@@ -1213,37 +1218,37 @@ function StudentKindergartenModal({
               <section
                 key={lesson}
                 className={cn(
-                  "rounded-2xl bg-white p-4 shadow-soft ring-1 transition",
+                  "rounded-2xl bg-white p-4 shadow-soft ring-1 transition dark:bg-slate-900",
                   locked
-                    ? "bg-slate-50 opacity-60 ring-slate-100"
+                    ? "bg-slate-50 opacity-60 ring-slate-100 dark:bg-slate-800/50 dark:ring-slate-800"
                     : complete
                       ? "ring-emerald-400"
-                      : "ring-slate-100"
+                      : "ring-slate-100 dark:bg-slate-900 dark:ring-slate-800"
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className={cn("text-base font-extrabold", locked ? "text-slate-400" : "text-slate-800")}>
+                    <h3 className={cn("text-base font-extrabold", locked ? "text-slate-400 dark:text-slate-500" : "text-slate-800 dark:text-slate-100")}>
                       {lesson}과: {LESSON_TITLES[lesson]}
                     </h3>
-                    <p className="mt-1 text-xs font-bold text-slate-400">
+                    <p className="mt-1 text-xs font-bold text-slate-400 dark:text-slate-500">
                       {locked ? `${availableLessonLimit + 1}과부터 순서대로 열려요` : `${selectedCount}/3 완료`}
                     </p>
                   </div>
                   {locked && (
-                    <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-extrabold text-slate-500">
+                    <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-extrabold text-slate-500 dark:bg-slate-700 dark:text-slate-300">
                       오늘 공과가 아닙니다
                     </span>
                   )}
                   {complete && !locked && (
-                    <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white">
+                    <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white dark:bg-white dark:text-slate-950">
                       완료
                     </span>
                   )}
                 </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                   <div
-                    className="h-full rounded-full bg-slate-900 transition-all"
+                    className="h-full rounded-full bg-slate-900 transition-all dark:bg-white"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -1262,8 +1267,8 @@ function StudentKindergartenModal({
                           selected && activity.color === "yellow" && "bg-amber-600 text-white",
                           selected && activity.color === "green" && "bg-pastel-greenDeep text-white",
                           selected && activity.color === "blue" && "bg-pastel-blueDeep text-white",
-                          !selected && "bg-white text-slate-600 ring-1 ring-slate-200",
-                          locked && "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200 active:scale-100"
+                          !selected && "bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700",
+                          locked && "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200 active:scale-100 dark:bg-slate-800 dark:text-slate-500 dark:ring-slate-700"
                         )}
                       >
                         {activity.label}
@@ -1276,11 +1281,11 @@ function StudentKindergartenModal({
           })}
         </div>
 
-        <div className="flex shrink-0 gap-2 border-t border-slate-100 bg-white px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
+        <div className="flex shrink-0 gap-2 border-t border-slate-100 bg-white px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 dark:border-slate-800 dark:bg-slate-900">
           <button
             type="button"
             onClick={onClose}
-            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98] dark:bg-white dark:text-slate-950"
           >
             <Save className="h-5 w-5" />
             저장하기
@@ -1336,18 +1341,18 @@ function StudentQuizModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-soft">
+      <div className="mx-auto flex max-h-[90dvh] w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-soft dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
         {/* 시트 핸들 */}
         <div className="flex shrink-0 justify-center pb-1 pt-3">
-          <span className="h-1.5 w-12 rounded-full bg-slate-200" />
+          <span className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700" />
         </div>
 
         {/* 학생 프로필 + 이름 */}
-        <header className="flex shrink-0 items-center gap-3 bg-slate-50 px-5 pb-4 pt-3 ring-1 ring-slate-100">
+        <header className="flex shrink-0 items-center gap-3 bg-slate-50 px-5 pb-4 pt-3 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:ring-slate-700">
           <div className="relative shrink-0">
             <div className={cn(
-              "relative h-14 w-14 overflow-hidden rounded-full border-[4px] bg-white transition-colors",
-              done ? "border-pastel-blueDeep" : "border-white"
+              "relative h-14 w-14 overflow-hidden rounded-full border-[4px] bg-white transition-colors dark:bg-slate-800",
+              done ? "border-pastel-blueDeep" : "border-white dark:border-slate-700"
             )}>
               <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
               {done && (
@@ -1360,11 +1365,11 @@ function StudentQuizModal({
           <div className="min-w-0">
             <p
               id="quiz-modal-title"
-              className="truncate text-xl font-extrabold text-slate-800"
+              className="truncate text-xl font-extrabold text-slate-800 dark:text-slate-100"
             >
               {student.name}
             </p>
-            <p className="text-xs text-slate-500">탭할 때마다 <b>정답 → 오답 → 미정</b> 순</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">탭할 때마다 <b>정답 → 오답 → 미정</b> 순</p>
           </div>
         </header>
 
@@ -1387,7 +1392,7 @@ function StudentQuizModal({
                       ? "bg-pastel-blueDeep text-white shadow-soft"
                       : state === 'fail'
                         ? "bg-red-400 text-white shadow-soft"
-                        : "bg-slate-50 text-slate-700 ring-1 ring-slate-200"
+                        : "bg-slate-50 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
                   )}
                 >
                   {n}번
@@ -1396,18 +1401,18 @@ function StudentQuizModal({
             })}
           </div>
           {Object.keys(states).length > 0 && (
-            <p className="mt-3 text-center text-sm text-slate-500">
+            <p className="mt-3 text-center text-sm text-slate-500 dark:text-slate-400">
               정답: {formatQuiz(states) || '오답'}
             </p>
           )}
         </div>
 
         {/* 하단 버튼 */}
-        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
+        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 dark:border-slate-800">
           <button
             type="button"
             onClick={onBack}
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 shadow-soft transition active:scale-[0.98]"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 shadow-soft transition active:scale-[0.98] dark:bg-slate-800 dark:text-slate-200"
             aria-label="뒤로 가기"
           >
             <ArrowLeft className="h-6 w-6" />
@@ -1415,7 +1420,7 @@ function StudentQuizModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-14 flex-1 rounded-xl bg-slate-900 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98]"
+            className="h-14 flex-1 rounded-xl bg-slate-900 text-lg font-extrabold text-white shadow-soft transition active:scale-[0.98] dark:bg-white dark:text-slate-950"
           >
             확인
           </button>
@@ -1470,18 +1475,18 @@ function StudentActionSheet({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="mx-auto flex w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-soft">
+      <div className="mx-auto flex w-full max-w-md animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-soft dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
         {/* 시트 핸들 */}
         <div className="flex shrink-0 justify-center pb-1 pt-3">
-          <span className="h-1.5 w-12 rounded-full bg-slate-200" />
+          <span className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700" />
         </div>
 
         {/* 학생 프로필 */}
-        <header className="relative flex flex-col items-center gap-2 bg-slate-50 px-5 pb-5 pt-3">
+        <header className="relative flex flex-col items-center gap-2 bg-slate-50 px-5 pb-5 pt-3 dark:bg-slate-800/70">
           <div className="relative">
             <div className={cn(
-              "relative h-20 w-20 overflow-hidden rounded-full border-[4px] bg-white shadow-soft transition-colors",
-              done ? "border-pastel-greenDeep" : "border-white"
+              "relative h-20 w-20 overflow-hidden rounded-full border-[4px] bg-white shadow-soft transition-colors dark:bg-slate-800",
+              done ? "border-pastel-greenDeep" : "border-white dark:border-slate-700"
             )}>
               <StudentAvatar name={student.name} photoUrl={student.photoUrl} />
               {done && (
@@ -1491,8 +1496,8 @@ function StudentActionSheet({
               )}
             </div>
           </div>
-          <p className="text-xl font-extrabold text-slate-800">{student.name}</p>
-          <p className="text-sm text-slate-500">어떤 활동을 표시할까요?</p>
+          <p className="text-xl font-extrabold text-slate-800 dark:text-slate-100">{student.name}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">어떤 활동을 표시할까요?</p>
         </header>
 
         {/* 암송 / 퀴즈 버튼 */}
@@ -1550,7 +1555,7 @@ function ColorLegend({
   const successBg = successColor === "green" ? "bg-pastel-greenDeep" : "bg-pastel-blueDeep";
   const failLabel = successLabel === "성공" ? "실패" : "오답";
   return (
-    <div className="mx-5 mb-3 flex items-center justify-center gap-3 rounded-xl bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-600 ring-1 ring-slate-100">
+    <div className="mx-5 mb-3 flex items-center justify-center gap-3 rounded-xl bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-600 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:text-slate-300 dark:ring-slate-700">
       <span className="flex items-center gap-1">
         <span className={cn("h-3 w-3 rounded", successBg)} />
         {successLabel}
@@ -1560,7 +1565,7 @@ function ColorLegend({
         {failLabel}
       </span>
       <span className="flex items-center gap-1">
-        <span className="h-3 w-3 rounded bg-white ring-1 ring-slate-200" />
+        <span className="h-3 w-3 rounded bg-white ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700" />
         미정
       </span>
     </div>
@@ -1595,6 +1600,12 @@ function ProgressBar({
       : color === "blue"
         ? "text-sky-800"
         : "text-amber-800";
+  const darkTint =
+    color === "green"
+      ? "dark:text-emerald-200"
+      : color === "blue"
+        ? "dark:text-sky-200"
+        : "dark:text-amber-200";
   const bg =
     color === "green"
       ? "bg-emerald-50"
@@ -1603,17 +1614,17 @@ function ProgressBar({
         : "bg-amber-50";
 
   return (
-    <div className={cn("relative flex flex-col gap-1 overflow-hidden rounded-2xl px-3 py-2 ring-1 ring-slate-200", bg)}>
+    <div className={cn("relative flex flex-col gap-1 overflow-hidden rounded-2xl px-3 py-2 ring-1 ring-slate-200 dark:bg-slate-800/70 dark:ring-slate-700", bg)}>
       <div className="flex items-center justify-between">
-        <span className={cn("flex items-center gap-1 text-xs font-extrabold", tint)}>
+        <span className={cn("flex items-center gap-1 text-xs font-extrabold", tint, darkTint)}>
           {icon}
           {label}
         </span>
-        <span className={cn("text-xs font-extrabold", isFull ? tint : "text-slate-700")}>
-          {done}<span className="text-slate-400">/{total}</span>
+        <span className={cn("text-xs font-extrabold", isFull ? cn(tint, darkTint) : "text-slate-700 dark:text-slate-200")}>
+          {done}<span className="text-slate-400 dark:text-slate-500">/{total}</span>
         </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-white/80 ring-1 ring-white/60">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-white/80 ring-1 ring-white/60 dark:bg-slate-950/80 dark:ring-slate-700">
         <div
           className={cn("h-full rounded-full transition-all duration-500", fill)}
           style={{ width: `${pct}%` }}

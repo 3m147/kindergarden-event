@@ -2,6 +2,8 @@ package com.kindergarden.recitation.service;
 
 import com.kindergarden.recitation.dto.ClassDto;
 import com.kindergarden.recitation.dto.StudentRecitationDto;
+import com.kindergarden.recitation.dto.PersonProfileDto;
+import com.kindergarden.recitation.entity.ClassEntity;
 import com.kindergarden.recitation.entity.RecitationRecord;
 import com.kindergarden.recitation.entity.Student;
 import com.kindergarden.recitation.entity.Teacher;
@@ -74,6 +76,8 @@ public class RecitationService {
                     s.getId(),
                     s.getName(),
                     s.getPhotoUrl(),
+                    s.getBirthDate(),
+                    s.getParentName(),
                     s.getClassEntity().getName(),
                     s.getClassEntity().getId(),
                     lessonStates,
@@ -84,6 +88,49 @@ public class RecitationService {
                     teacherName
             );
         }).toList();
+    }
+
+    @Transactional
+    public StudentRecitationDto createStudent(Long classId, String name, LocalDate birthDate, String parentName) {
+        String trimmedName = name == null ? "" : name.trim();
+        if (trimmedName.isEmpty()) {
+            throw new IllegalArgumentException("학생 이름을 입력해 주세요.");
+        }
+
+        ClassEntity classEntity = classRepository.findById(classId)
+                .orElseThrow(() -> new IllegalArgumentException("반 없음: " + classId));
+
+        Student student = Student.builder()
+                .name(trimmedName)
+                .birthDate(birthDate)
+                .parentName(normalizeOptional(parentName))
+                .classEntity(classEntity)
+                .build();
+
+        Student saved = studentRepository.save(student);
+        return getClassStatus(classId, LocalDate.now())
+                .stream()
+                .filter(dto -> dto.studentId().equals(saved.getId()))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    @Transactional
+    public PersonProfileDto updateTeacher(Long teacherId, String name) {
+        Teacher teacher = teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new IllegalArgumentException("교사 없음: " + teacherId));
+        teacher.setName(requireName(name, "교사 이름"));
+        return toProfile(teacherRepository.save(teacher));
+    }
+
+    @Transactional
+    public PersonProfileDto updateStudent(Long studentId, String name, LocalDate birthDate, String parentName) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
+        student.setName(requireName(name, "아이 이름"));
+        student.setBirthDate(birthDate);
+        student.setParentName(normalizeOptional(parentName));
+        return toProfile(studentRepository.save(student));
     }
 
     @Transactional
@@ -183,21 +230,43 @@ public class RecitationService {
         List<com.kindergarden.recitation.dto.PersonProfileDto> profiles = new java.util.ArrayList<>();
         
         teacherRepository.findAll().forEach(t -> {
-            profiles.add(new com.kindergarden.recitation.dto.PersonProfileDto(
-                t.getId(), t.getName(), "teacher", 
-                t.getClassEntity().getName(), t.getClassEntity().getId(),
-                t.getRole(), t.getPhotoUrl()
-            ));
+            profiles.add(toProfile(t));
         });
         
         studentRepository.findAll().forEach(s -> {
-            profiles.add(new com.kindergarden.recitation.dto.PersonProfileDto(
-                s.getId(), s.getName(), "student", 
-                s.getClassEntity().getName(), s.getClassEntity().getId(),
-                null, s.getPhotoUrl()
-            ));
+            profiles.add(toProfile(s));
         });
         
         return profiles;
+    }
+
+    private PersonProfileDto toProfile(Teacher teacher) {
+        return new PersonProfileDto(
+                teacher.getId(), teacher.getName(), "teacher",
+                teacher.getClassEntity().getName(), teacher.getClassEntity().getId(),
+                teacher.getRole(), teacher.getPhotoUrl(), null, null
+        );
+    }
+
+    private PersonProfileDto toProfile(Student student) {
+        return new PersonProfileDto(
+                student.getId(), student.getName(), "student",
+                student.getClassEntity().getName(), student.getClassEntity().getId(),
+                null, student.getPhotoUrl(), student.getBirthDate(), student.getParentName()
+        );
+    }
+
+    private String requireName(String value, String label) {
+        String normalized = normalizeOptional(value);
+        if (normalized == null) {
+            throw new IllegalArgumentException(label + "을 입력해 주세요.");
+        }
+        return normalized;
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) return null;
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

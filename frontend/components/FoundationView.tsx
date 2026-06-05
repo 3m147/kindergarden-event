@@ -82,18 +82,18 @@ export default function FoundationView({ pdfUrl = "/foundation.pdf" }: Foundatio
   const fullscreenPdfUrl = `${currentPdfUrl}#toolbar=0&navpanes=0&scrollbar=1&view=Fit`;
 
   return (
-    <section className="w-full rounded-2xl bg-white p-4 shadow-soft ring-1 ring-slate-200">
+    <section className="w-full rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-900 dark:ring-slate-800">
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
           <FileText className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <h2 className="break-words text-base font-extrabold text-slate-800">{currentTitle}</h2>
-          <p className="mt-1 text-sm font-bold leading-6 text-slate-500">
+          <h2 className="break-words text-base font-extrabold text-slate-800 dark:text-slate-100">{currentTitle}</h2>
+          <p className="mt-1 text-sm font-bold leading-6 text-slate-500 dark:text-slate-400">
             모바일에서 PDF가 작게 보이면 전체화면으로 돌려 한 페이지씩 확인할 수 있습니다.
           </p>
           {activeMaterial && (
-            <p className="mt-1 truncate text-xs font-extrabold text-pastel-greenDeep">
+            <p className="mt-1 truncate text-xs font-extrabold text-pastel-greenDeep dark:text-emerald-300">
               {activeMaterial.fileName}
             </p>
           )}
@@ -104,7 +104,7 @@ export default function FoundationView({ pdfUrl = "/foundation.pdf" }: Foundatio
         <button
           type="button"
           onClick={() => setFullscreenOpen(true)}
-              className="flex h-12 items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-sm font-extrabold text-white shadow-sm transition active:scale-95"
+              className="flex h-12 items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-sm font-extrabold text-white shadow-sm transition active:scale-95 dark:bg-white dark:text-slate-950"
         >
           <Maximize2 className="h-4 w-4" />
           전체화면
@@ -112,14 +112,14 @@ export default function FoundationView({ pdfUrl = "/foundation.pdf" }: Foundatio
         <a
           href={currentPdfUrl}
           download
-          className="flex h-12 items-center justify-center gap-1.5 rounded-xl bg-slate-100 text-sm font-extrabold text-slate-600 ring-1 ring-slate-200 transition active:scale-95"
+          className="flex h-12 items-center justify-center gap-1.5 rounded-xl bg-slate-100 text-sm font-extrabold text-slate-600 ring-1 ring-slate-200 transition active:scale-95 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
         >
           <Download className="h-4 w-4" />
           다운로드
         </a>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200">
+      <div className="mt-4 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-700">
         <object
           data={`${currentPdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
           type="application/pdf"
@@ -127,15 +127,15 @@ export default function FoundationView({ pdfUrl = "/foundation.pdf" }: Foundatio
           aria-label="머릿돌 PDF 미리보기"
         >
           <div className="flex min-h-80 flex-col items-center justify-center px-5 py-10 text-center">
-            <Smartphone className="h-10 w-10 text-slate-300" />
-            <p className="mt-3 text-sm font-extrabold text-slate-500">
+            <Smartphone className="h-10 w-10 text-slate-300 dark:text-slate-600" />
+            <p className="mt-3 text-sm font-extrabold text-slate-500 dark:text-slate-400">
               이 브라우저에서는 PDF 미리보기를 지원하지 않습니다.
             </p>
             <a
               href={currentPdfUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-4 flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white"
+              className="mt-4 flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white dark:bg-white dark:text-slate-950"
             >
           PDF 열기
             </a>

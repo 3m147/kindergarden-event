@@ -17,6 +17,8 @@ export type StudentRecitationDto = {
   studentId: number;
   name: string;
   photoUrl: string;
+  birthDate?: string;
+  parentName?: string;
   className: string;
   classId: number;
   lessonStates: Record<number, "success" | "fail">;
@@ -51,6 +53,8 @@ export type PersonProfileDto = {
   classId: number;
   role?: string;
   photoUrl?: string;
+  birthDate?: string;
+  parentName?: string;
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -90,6 +94,24 @@ export const api = {
   getClassRecitations: (classId: number, date?: string) =>
     request<StudentRecitationDto[]>(
       `/api/classes/${classId}/recitations${date ? `?date=${date}` : ""}`
+    ),
+
+  createStudent: (classId: number, body: { name: string; birthDate?: string; parentName?: string }) =>
+    request<StudentRecitationDto>(
+      `/api/classes/${classId}/students`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  updateTeacher: (teacherId: number, name: string) =>
+    request<PersonProfileDto>(
+      `/api/teachers/${teacherId}`,
+      { method: "PUT", body: JSON.stringify({ name }) }
+    ),
+
+  updateStudent: (studentId: number, body: { name: string; birthDate?: string; parentName?: string }) =>
+    request<PersonProfileDto>(
+      `/api/students/${studentId}`,
+      { method: "PUT", body: JSON.stringify(body) }
     ),
 
   toggleRecitation: (studentId: number, lessonNumber: number, type: string, success: boolean | null, teacherId: number, date?: string) =>
