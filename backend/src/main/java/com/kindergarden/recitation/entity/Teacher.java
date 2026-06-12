@@ -28,7 +28,8 @@ public class Teacher {
     @Column(nullable = false, length = 20)
     private String role; // "정교사" or "부교사"
 
-    @Column(name = "photo_url", columnDefinition = "LONGTEXT")
+    @Lob
+    @Column(name = "photo_url")
     private String photoUrl;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

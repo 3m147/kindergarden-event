@@ -4,18 +4,19 @@ server:
 
 spring:
   datasource:
-    # 로컬 기본값 + Railway/운영에선 SPRING_DATASOURCE_URL 등 환경변수로 덮어씀
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/kindergaten?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:1234}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Oracle Autonomous DB Wallet 경로와 비밀번호는 환경변수로 관리.
+    # 배포 환경에서는 ORACLE_JDBC_URL, ORACLE_DB_USERNAME, ORACLE_DB_PASSWORD를 반드시 설정.
+    url: ${ORACLE_JDBC_URL:jdbc:oracle:thin:@kindergarden_low?TNS_ADMIN=/Users/kkmm99jj/Downloads/Wallet_KINDERGARDEN}
+    username: ${ORACLE_DB_USERNAME:KINDERGARDEN_APP}
+    password: ${ORACLE_DB_PASSWORD:}
+    driver-class-name: oracle.jdbc.OracleDriver
   jpa:
     hibernate:
       # 첫 배포: update (테이블 자동 생성). 이후엔 validate 권장.
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.OracleDialect
         format_sql: true
     show-sql: ${SPRING_JPA_SHOW_SQL:true}
   sql:
@@ -31,6 +32,8 @@ file:
   upload-dir: ${FILE_UPLOAD_DIR:uploads}
 
 app:
+  jwt-secret: ${APP_JWT_SECRET:local-development-secret-change-before-production-1234567890}
+  jwt-expiration-hours: ${APP_JWT_EXPIRATION_HOURS:24}
   # 업로드 사진의 절대 URL을 만들 때 쓰는 백엔드 공개 주소.
   # Railway 운영 시: APP_PUBLIC_URL=https://xxx.up.railway.app
   public-url: ${APP_PUBLIC_URL:http://localhost:8080}

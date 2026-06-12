@@ -20,3 +20,15 @@ target/
 
 # 업로드된 학생/교사 프로필 사진 (개인정보)
 backend/uploads/
+
+# Oracle Autonomous Database Wallet / local DB credentials
+Wallet_*/
+wallet_*/
+*.sso
+*.p12
+*.jks
+backend/.env
+backend/.env.*
+!backend/.env.example
+deploy/oracle-compute/.env
+deploy/oracle-compute/wallet/

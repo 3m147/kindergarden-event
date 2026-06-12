@@ -12,7 +12,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Shield, LogOut, ArrowLeft, Camera, Upload, X, ChevronDown, ChevronUp, Users, GraduationCap, Trash2 } from "lucide-react";
-import { api, resolveMediaUrl } from "@/lib/api";
+import { api, clearAuthToken, hasAuthToken, resolveMediaUrl } from "@/lib/api";
 
 // --- 더미 데이터 (DB 연동 전) ---
 type Person = {
@@ -52,7 +52,7 @@ export default function AdminProfileManager() {
   // 인증 체크 및 프로필 데이터 불러오기
   React.useEffect(() => {
     const auth = localStorage.getItem("admin_authenticated");
-    if (auth !== "true") {
+    if (auth !== "true" || !hasAuthToken()) {
       router.replace("/admin");
       return;
     }
@@ -85,6 +85,7 @@ export default function AdminProfileManager() {
 
   const handleLogout = () => {
     localStorage.removeItem("admin_authenticated");
+    clearAuthToken();
     router.replace("/admin");
   };
 

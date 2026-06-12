@@ -1,0 +1,8 @@
+target
+uploads
+.env
+Wallet_*
+wallet_*
+*.sso
+*.p12
+*.jks

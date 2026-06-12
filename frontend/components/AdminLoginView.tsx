@@ -13,7 +13,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Eye, EyeOff, Shield, ArrowLeft, LogOut } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, clearAuthToken, hasAuthToken, saveAuthToken } from "@/lib/api";
 
 export default function AdminLoginView() {
   const router = useRouter();
@@ -26,11 +26,12 @@ export default function AdminLoginView() {
   const [alreadyAuthenticated, setAlreadyAuthenticated] = React.useState(false);
 
   React.useEffect(() => {
-    setAlreadyAuthenticated(localStorage.getItem("admin_authenticated") === "true");
+    setAlreadyAuthenticated(localStorage.getItem("admin_authenticated") === "true" && hasAuthToken());
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("admin_authenticated");
+    clearAuthToken();
     setAlreadyAuthenticated(false);
     setLoggedIn(false);
     setUserId("");
@@ -51,7 +52,8 @@ export default function AdminLoginView() {
     setLoading(true);
 
     try {
-      await api.adminLogin(userId.trim(), password);
+      const response = await api.adminLogin(userId.trim(), password);
+      saveAuthToken(response.token);
       
       setLoggedIn(true);
       // localStorage에 관리자 인증 상태 저장

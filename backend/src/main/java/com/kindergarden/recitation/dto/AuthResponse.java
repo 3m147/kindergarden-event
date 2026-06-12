@@ -16,5 +16,6 @@ public class AuthResponse {
     private Long classId;
     private String className;
     private String photoUrl;
+    private String token;
     private String message;
 }

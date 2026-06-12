@@ -14,7 +14,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Bell, BookOpen, CalendarDays, Camera, Check, ClipboardCheck, Copy, Eye, EyeOff, Home, LockKeyhole, LogIn, LogOut, Megaphone, Moon, MoreVertical, PlayCircle, RotateCcw, Save, Settings, ShieldCheck, Sun, User, X } from "lucide-react";
-import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
+import { api, clearAuthToken, resolveMediaUrl, saveAuthToken, type StudentRecitationDto } from "@/lib/api";
 import { readAdminNotices, type AdminNotice } from "@/lib/notices";
 import { readWeeklyPhotos, type WeeklyPhoto } from "@/lib/weeklyPhotos";
 import { getActiveScheduleImage, readScheduleImages, type ScheduleImage } from "@/lib/scheduleImages";
@@ -321,6 +321,7 @@ export default function StartView() {
 
     try {
       const response = await api.login(userId.trim(), password);
+      saveAuthToken(response.token);
 
       const account: TeacherAccount = {
         id: response.id!.toString(),
@@ -354,6 +355,7 @@ export default function StartView() {
 
   const handleTeacherLogout = () => {
     localStorage.removeItem("teacher_info");
+    clearAuthToken();
     setLoggedIn(null);
     setUserId("");
     setPassword("");

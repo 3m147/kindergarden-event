@@ -18,6 +18,7 @@ public class AuthService {
 
     private final TeacherRepository teacherRepository;
     private final AdminRepository adminRepository;
+    private final JwtService jwtService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthResponse loginTeacher(AuthRequest request) {
@@ -35,6 +36,7 @@ public class AuthService {
                 .classId(teacher.getClassEntity().getId())
                 .className(teacher.getClassEntity().getName())
                 .photoUrl(teacher.getPhotoUrl())
+                .token(jwtService.issueToken(teacher.getLoginId(), "TEACHER", teacher.getId()))
                 .build();
     }
 
@@ -50,6 +52,7 @@ public class AuthService {
                 .id(admin.getId())
                 .name(admin.getName())
                 .role("관리자")
+                .token(jwtService.issueToken(admin.getLoginId(), "ADMIN", admin.getId()))
                 .build();
     }
 }

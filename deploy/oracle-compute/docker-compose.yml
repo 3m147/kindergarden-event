@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: ../../backend
+    restart: unless-stopped
+    environment:
+      ORACLE_JDBC_URL: jdbc:oracle:thin:@kindergarden_low?TNS_ADMIN=/opt/oracle/wallet
+      ORACLE_DB_USERNAME: ${ORACLE_DB_USERNAME}
+      ORACLE_DB_PASSWORD: ${ORACLE_DB_PASSWORD}
+      APP_JWT_SECRET: ${APP_JWT_SECRET}
+      APP_PUBLIC_URL: https://${API_DOMAIN}
+      APP_ALLOWED_ORIGINS: ${APP_ALLOWED_ORIGINS}
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_SHOW_SQL: "false"
+      FILE_UPLOAD_DIR: /data/uploads
+    volumes:
+      - ./wallet:/opt/oracle/wallet:ro
+      - uploads:/data/uploads
+    networks:
+      - app
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app
+    depends_on:
+      - backend
+
+networks:
+  app:
+
+volumes:
+  uploads:
+  caddy_data:
+  caddy_config:

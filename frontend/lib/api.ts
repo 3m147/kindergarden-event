@@ -1,6 +1,21 @@
 // 프론트 ↔ Spring Boot REST 클라이언트.
 // 환경변수로 베이스 URL 분리 — 개발 중엔 localhost:8080, 배포 시엔 .env.production 에서 덮어쓴다.
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+const AUTH_TOKEN_KEY = "kindergarden_auth_token";
+
+export function saveAuthToken(token?: string) {
+  if (typeof window === "undefined" || !token) return;
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+export function clearAuthToken() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+export function hasAuthToken() {
+  return typeof window !== "undefined" && Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
+}
 
 export function resolveMediaUrl(url?: string | null) {
   const value = url?.trim();
@@ -42,6 +57,7 @@ export type AuthResponse = {
   classId?: number;
   className?: string;
   photoUrl?: string;
+  token?: string;
   message?: string;
 };
 
@@ -59,9 +75,10 @@ export type PersonProfileDto = {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = init?.body instanceof FormData;
+  const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
   const headers = isFormData 
-    ? { ...(init?.headers ?? {}) } // let browser set multipart boundary
-    : { "Content-Type": "application/json", ...(init?.headers ?? {}) };
+    ? { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) }
+    : { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) };
 
   const res = await fetch(`${BASE}${path}`, {
     ...init,

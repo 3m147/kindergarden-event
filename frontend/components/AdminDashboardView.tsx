@@ -11,7 +11,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2, Image as ImageIcon, Upload, FileText, ExternalLink, CalendarDays, PlayCircle } from "lucide-react";
-import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
+import { api, clearAuthToken, hasAuthToken, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 import { readAdminNotices, writeAdminNotices, type AdminNotice } from "@/lib/notices";
 import { readWeeklyPhotos, writeWeeklyPhotos, type WeeklyPhoto } from "@/lib/weeklyPhotos";
 import { readFoundationMaterials, writeFoundationMaterials, type FoundationMaterial } from "@/lib/foundationMaterials";
@@ -207,7 +207,7 @@ export default function AdminDashboardView({
 
   React.useEffect(() => {
     const auth = localStorage.getItem("admin_authenticated");
-    if (auth !== "true") {
+    if (auth !== "true" || !hasAuthToken()) {
       router.replace("/admin");
       return;
     }
@@ -230,6 +230,7 @@ export default function AdminDashboardView({
 
   const handleLogout = () => {
     localStorage.removeItem("admin_authenticated");
+    clearAuthToken();
     router.replace("/admin");
   };
 
