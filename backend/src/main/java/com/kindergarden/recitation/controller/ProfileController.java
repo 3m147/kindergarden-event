@@ -5,18 +5,15 @@ import com.kindergarden.recitation.entity.Teacher;
 import com.kindergarden.recitation.repository.StudentRepository;
 import com.kindergarden.recitation.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
-import java.util.UUID;
+import com.kindergarden.recitation.storage.PrivateFileStorage;
+import com.kindergarden.recitation.storage.StoredFileCategory;
+import com.kindergarden.recitation.storage.StoredObject;
+import com.kindergarden.recitation.service.SharedContentService;
 
 @RestController
 @RequestMapping("/api/profiles")
@@ -25,13 +22,8 @@ public class ProfileController {
 
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
-
-    @Value("${file.upload-dir:uploads}")
-    private String uploadDir;
-
-    // 운영 환경에선 APP_PUBLIC_URL=https://xxx.up.railway.app 같은 값으로 주입됨
-    @Value("${app.public-url:http://localhost:8080}")
-    private String publicUrl;
+    private final PrivateFileStorage storage;
+    private final SharedContentService sharedContentService;
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadProfile(
@@ -43,49 +35,31 @@ public class ProfileController {
             return ResponseEntity.badRequest().body("파일이 비어있습니다.");
         }
 
+        StoredObject object = storage.upload(StoredFileCategory.PROFILE, file);
         try {
-            // 업로드 디렉토리 생성
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            // 고유 파일명 생성
-            String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename != null && originalFilename.contains(".") 
-                    ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
-                    : ".jpg";
-            String newFilename = UUID.randomUUID().toString() + extension;
-            Path filePath = uploadPath.resolve(newFilename);
-
-            // 파일 저장
-            file.transferTo(filePath.toAbsolutePath().toFile());
-            
-            // 파일 URL — 백엔드 공개 주소 기준 (env: APP_PUBLIC_URL)
-            String normalizedPublicUrl = publicUrl.trim();
-            if (!normalizedPublicUrl.startsWith("http://") && !normalizedPublicUrl.startsWith("https://")) {
-                normalizedPublicUrl = "https://" + normalizedPublicUrl;
-            }
-            normalizedPublicUrl = normalizedPublicUrl.replaceAll("/+$", "");
-            String fileUrl = normalizedPublicUrl + "/uploads/" + newFilename;
-
-            // DB 업데이트
+            String previousReference;
             if ("teacher".equals(type)) {
                 Teacher teacher = teacherRepository.findById(id).orElseThrow();
-                teacher.setPhotoUrl(fileUrl);
+                previousReference = teacher.getPhotoUrl();
+                teacher.setPhotoUrl(object.objectKey());
                 teacherRepository.save(teacher);
             } else if ("student".equals(type)) {
                 Student student = studentRepository.findById(id).orElseThrow();
-                student.setPhotoUrl(fileUrl);
+                previousReference = student.getPhotoUrl();
+                student.setPhotoUrl(object.objectKey());
                 studentRepository.save(student);
             } else {
+                storage.delete(object.objectKey());
                 return ResponseEntity.badRequest().body("알 수 없는 타입: " + type);
             }
 
-            return ResponseEntity.ok(Map.of("url", fileUrl));
-
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().body("파일 저장 실패: " + e.getMessage());
+            if (previousReference != null && !previousReference.matches("^(https?://|data:|blob:).*")) {
+                storage.delete(previousReference);
+            }
+            return ResponseEntity.ok(Map.of("url", sharedContentService.readUrl(object.objectKey())));
+        } catch (RuntimeException e) {
+            storage.delete(object.objectKey());
+            throw e;
         }
     }
 }

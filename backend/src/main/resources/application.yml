@@ -32,6 +32,9 @@ file:
   upload-dir: ${FILE_UPLOAD_DIR:uploads}
 
 app:
+  storage:
+    bucket: ${GCS_BUCKET_NAME:}
+    signed-url-minutes: ${GCS_SIGNED_URL_MINUTES:15}
   jwt-secret: ${APP_JWT_SECRET:local-development-secret-change-before-production-1234567890}
   jwt-expiration-hours: ${APP_JWT_EXPIRATION_HOURS:24}
   # 업로드 사진의 절대 URL을 만들 때 쓰는 백엔드 공개 주소.

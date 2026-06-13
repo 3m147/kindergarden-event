@@ -29,6 +29,7 @@ public class RecitationService {
     private final StudentRepository studentRepository;
     private final RecitationRecordRepository recordRepository;
     private final TeacherRepository teacherRepository;
+    private final FileUrlService fileUrlService;
 
     @Transactional(readOnly = true)
     public List<ClassDto> listClasses() {
@@ -75,7 +76,7 @@ public class RecitationService {
             return new StudentRecitationDto(
                     s.getId(),
                     s.getName(),
-                    s.getPhotoUrl(),
+                    fileUrlService.resolve(s.getPhotoUrl()),
                     s.getBirthDate(),
                     s.getParentName(),
                     s.getClassEntity().getName(),
@@ -244,7 +245,7 @@ public class RecitationService {
         return new PersonProfileDto(
                 teacher.getId(), teacher.getName(), "teacher",
                 teacher.getClassEntity().getName(), teacher.getClassEntity().getId(),
-                teacher.getRole(), teacher.getPhotoUrl(), null, null
+                teacher.getRole(), fileUrlService.resolve(teacher.getPhotoUrl()), null, null
         );
     }
 
@@ -252,7 +253,7 @@ public class RecitationService {
         return new PersonProfileDto(
                 student.getId(), student.getName(), "student",
                 student.getClassEntity().getName(), student.getClassEntity().getId(),
-                null, student.getPhotoUrl(), student.getBirthDate(), student.getParentName()
+                null, fileUrlService.resolve(student.getPhotoUrl()), student.getBirthDate(), student.getParentName()
         );
     }
 
