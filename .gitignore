@@ -13,6 +13,7 @@ yarn-debug.log*
 yarn-error.log*
 target/
 .idea/
+.worktrees/
 
 # 빌드 산출물
 *.class
