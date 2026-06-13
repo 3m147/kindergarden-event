@@ -1,3 +1,9 @@
+import type { WeeklyPhoto } from "@/lib/weeklyPhotos";
+import type { ScheduleImage } from "@/lib/scheduleImages";
+import type { FoundationMaterial } from "@/lib/foundationMaterials";
+import type { AdminNotice } from "@/lib/notices";
+import { DEFAULT_LESSON_VIDEOS, type LessonVideo } from "@/lib/lessonVideos";
+
 // 프론트 ↔ Spring Boot REST 클라이언트.
 // 환경변수로 베이스 URL 분리 — 개발 중엔 localhost:8080, 배포 시엔 .env.production 에서 덮어쓴다.
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
@@ -93,6 +99,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (res.status === 204 ? (undefined as T) : ((await res.json()) as T));
 }
 
+function uploadContent<T>(path: string, title: string, file: File) {
+  const formData = new FormData();
+  formData.append("title", title);
+  formData.append("file", file);
+  return request<T>(path, { method: "POST", body: formData });
+}
+
+function withStringId<T extends { id: string | number }>(item: T): Omit<T, "id"> & { id: string } {
+  return { ...item, id: String(item.id) };
+}
+
+function listWithStringIds<T extends { id: string | number }>(items: T[]) {
+  return items.map(withStringId);
+}
+
 export const api = {
   login: (loginId: string, password: string) => 
     request<AuthResponse>("/api/auth/login", {
@@ -155,6 +176,34 @@ export const api = {
     ),
 
   getAdminProfiles: () => request<PersonProfileDto[]>("/api/admin/profiles"),
+
+  listWeeklyPhotos: () => request<WeeklyPhoto[]>("/api/content/weekly-photos").then(listWithStringIds),
+  addWeeklyPhoto: (title: string, file: File) => uploadContent<WeeklyPhoto>("/api/admin/content/weekly-photos", title, file).then(withStringId),
+  deleteWeeklyPhoto: (id: string) => request<void>(`/api/admin/content/weekly-photos/${id}`, { method: "DELETE" }),
+
+  listScheduleImages: () => request<ScheduleImage[]>("/api/content/schedule-images").then(listWithStringIds),
+  addScheduleImage: (title: string, file: File) => uploadContent<ScheduleImage>("/api/admin/content/schedule-images", title, file).then(withStringId),
+  activateScheduleImage: (id: string) => request<ScheduleImage>(`/api/admin/content/schedule-images/${id}/active`, { method: "PUT" }).then(withStringId),
+  deleteScheduleImage: (id: string) => request<void>(`/api/admin/content/schedule-images/${id}`, { method: "DELETE" }),
+
+  listFoundationMaterials: () => request<FoundationMaterial[]>("/api/content/foundation-materials").then(listWithStringIds),
+  addFoundationMaterial: (title: string, file: File) => uploadContent<FoundationMaterial>("/api/admin/content/foundation-materials", title, file).then(withStringId),
+  activateFoundationMaterial: (id: string) => request<FoundationMaterial>(`/api/admin/content/foundation-materials/${id}/active`, { method: "PUT" }).then(withStringId),
+  deleteFoundationMaterial: (id: string) => request<void>(`/api/admin/content/foundation-materials/${id}`, { method: "DELETE" }),
+
+  listNotices: () => request<AdminNotice[]>("/api/content/notices").then(listWithStringIds),
+  listAdminNotices: () => request<AdminNotice[]>("/api/admin/content/notices").then(listWithStringIds),
+  addNotice: (notice: Omit<AdminNotice, "id" | "createdAt">) => request<AdminNotice>("/api/admin/content/notices", { method: "POST", body: JSON.stringify(notice) }).then(withStringId),
+  deleteNotice: (id: string) => request<void>(`/api/admin/content/notices/${id}`, { method: "DELETE" }),
+
+  listLessonVideos: () => request<LessonVideo[]>("/api/content/lesson-videos")
+    .then(listWithStringIds)
+    .then((videos) => videos.length > 0 ? videos : DEFAULT_LESSON_VIDEOS),
+  replaceLessonVideos: (videos: LessonVideo[]) => request<LessonVideo[]>("/api/admin/content/lesson-videos", {
+      method: "PUT",
+      body: JSON.stringify(videos.map(({ id: _id, ...video }) => video)),
+    })
+    .then(listWithStringIds),
 
   uploadProfile: (file: File, type: "teacher" | "student", id: number) => {
     const formData = new FormData();

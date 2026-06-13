@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { Download, FileText, Maximize2, Minimize2, Smartphone } from "lucide-react";
-import { getActiveFoundationMaterial, readFoundationMaterials, type FoundationMaterial } from "@/lib/foundationMaterials";
+import { api } from "@/lib/api";
+import { getActiveFoundationMaterial, type FoundationMaterial } from "@/lib/foundationMaterials";
 
 type FoundationViewProps = {
   pdfUrl?: string;
@@ -14,11 +15,9 @@ export default function FoundationView({ pdfUrl = "/foundation.pdf" }: Foundatio
   const fullscreenRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    try {
-      setActiveMaterial(getActiveFoundationMaterial(readFoundationMaterials()));
-    } catch {
-      setActiveMaterial(null);
-    }
+    api.listFoundationMaterials()
+      .then((materials) => setActiveMaterial(getActiveFoundationMaterial(materials)))
+      .catch(() => setActiveMaterial(null));
   }, []);
 
   React.useEffect(() => {

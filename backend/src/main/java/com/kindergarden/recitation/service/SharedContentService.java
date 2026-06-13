@@ -56,8 +56,8 @@ public class SharedContentService {
     public ScheduleImageDto createScheduleImage(String title, MultipartFile multipart, Long creatorId, String creatorType) {
         StoredFile file = store(StoredFileCategory.SCHEDULE_IMAGE, multipart, creatorId, creatorType);
         try {
-            boolean first = scheduleImageRepository.count() == 0;
-            return scheduleDto(scheduleImageRepository.save(ScheduleImage.builder().title(title(title, file)).file(file).active(first).build()));
+            scheduleImageRepository.findAll().forEach(item -> item.setActive(false));
+            return scheduleDto(scheduleImageRepository.save(ScheduleImage.builder().title(title(title, file)).file(file).active(true).build()));
         } catch (RuntimeException e) {
             cleanup(file);
             throw e;
@@ -68,8 +68,8 @@ public class SharedContentService {
     public FoundationMaterialDto createFoundationMaterial(String title, MultipartFile multipart, Long creatorId, String creatorType) {
         StoredFile file = store(StoredFileCategory.FOUNDATION_PDF, multipart, creatorId, creatorType);
         try {
-            boolean first = foundationMaterialRepository.count() == 0;
-            return foundationDto(foundationMaterialRepository.save(FoundationMaterial.builder().title(title(title, file)).file(file).active(first).build()));
+            foundationMaterialRepository.findAll().forEach(item -> item.setActive(false));
+            return foundationDto(foundationMaterialRepository.save(FoundationMaterial.builder().title(title(title, file)).file(file).active(true).build()));
         } catch (RuntimeException e) {
             cleanup(file);
             throw e;
@@ -93,7 +93,7 @@ public class SharedContentService {
         return lessonVideos();
     }
 
-    @Transactional public void deleteWeeklyPhoto(Long id) { deleteFileBacked(weeklyPhotoRepository.findById(id).orElseThrow(), p -> weeklyPhotoRepository.delete((WeeklyPhoto) p), ((WeeklyPhoto) weeklyPhotoRepository.findById(id).orElseThrow()).getFile()); }
+    @Transactional public void deleteWeeklyPhoto(Long id) { WeeklyPhoto v = weeklyPhotoRepository.findById(id).orElseThrow(); deleteFileBacked(v, p -> weeklyPhotoRepository.delete((WeeklyPhoto) p), v.getFile()); }
     @Transactional public void deleteScheduleImage(Long id) { ScheduleImage v = scheduleImageRepository.findById(id).orElseThrow(); deleteFileBacked(v, p -> scheduleImageRepository.delete((ScheduleImage) p), v.getFile()); }
     @Transactional public void deleteFoundationMaterial(Long id) { FoundationMaterial v = foundationMaterialRepository.findById(id).orElseThrow(); deleteFileBacked(v, p -> foundationMaterialRepository.delete((FoundationMaterial) p), v.getFile()); }
     @Transactional public void deleteNotice(Long id) { noticeRepository.deleteById(id); }

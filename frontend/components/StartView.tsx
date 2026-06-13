@@ -15,10 +15,10 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Bell, BookOpen, CalendarDays, Camera, Check, ClipboardCheck, Copy, Eye, EyeOff, Home, LockKeyhole, LogIn, LogOut, Megaphone, Moon, MoreVertical, PlayCircle, RotateCcw, Save, Settings, ShieldCheck, Sun, User, X } from "lucide-react";
 import { api, clearAuthToken, resolveMediaUrl, saveAuthToken, type StudentRecitationDto } from "@/lib/api";
-import { readAdminNotices, type AdminNotice } from "@/lib/notices";
-import { readWeeklyPhotos, type WeeklyPhoto } from "@/lib/weeklyPhotos";
-import { getActiveScheduleImage, readScheduleImages, type ScheduleImage } from "@/lib/scheduleImages";
-import { getActiveLessonVideo, readLessonVideos, type LessonVideo } from "@/lib/lessonVideos";
+import { type AdminNotice } from "@/lib/notices";
+import { type WeeklyPhoto } from "@/lib/weeklyPhotos";
+import { getActiveScheduleImage, type ScheduleImage } from "@/lib/scheduleImages";
+import { getActiveLessonVideo, type LessonVideo } from "@/lib/lessonVideos";
 import FoundationView from "@/components/FoundationView";
 
 const ASSISTANT_TEACHER_VIDEO_ID = "";
@@ -219,10 +219,9 @@ export default function StartView() {
     document.documentElement.style.colorScheme = teacherDarkMode ? "dark" : "light";
   }, [teacherDarkMode]);
 
-  const loadTeacherNotices = React.useCallback(() => {
+  const loadTeacherNotices = React.useCallback(async () => {
     try {
-      const parsed = readAdminNotices();
-      const popupNotices = parsed.filter((notice) => notice.showToTeachers);
+      const popupNotices = await api.listNotices();
       const hiddenToday = localStorage.getItem(TEACHER_NOTICE_HIDE_DATE_KEY) === todayStorageKey();
       const muted = localStorage.getItem(TEACHER_NOTICE_MUTED_KEY) === "true";
       setTeacherNotices(popupNotices);
@@ -235,9 +234,9 @@ export default function StartView() {
     }
   }, []);
 
-  const loadWeeklyPhotos = React.useCallback(() => {
+  const loadWeeklyPhotos = React.useCallback(async () => {
     try {
-      const photos = readWeeklyPhotos();
+      const photos = await api.listWeeklyPhotos();
       setWeeklyPhotos(photos);
       setActivePhotoIndex(0);
     } catch {
@@ -246,17 +245,17 @@ export default function StartView() {
     }
   }, []);
 
-  const loadScheduleImage = React.useCallback(() => {
+  const loadScheduleImage = React.useCallback(async () => {
     try {
-      setActiveScheduleImage(getActiveScheduleImage(readScheduleImages()));
+      setActiveScheduleImage(getActiveScheduleImage(await api.listScheduleImages()));
     } catch {
       setActiveScheduleImage(null);
     }
   }, []);
 
-  const loadLessonVideos = React.useCallback(() => {
+  const loadLessonVideos = React.useCallback(async () => {
     try {
-      setLessonVideos(readLessonVideos());
+      setLessonVideos(await api.listLessonVideos());
     } catch {
       setLessonVideos([]);
     }

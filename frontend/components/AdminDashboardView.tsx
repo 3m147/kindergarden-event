@@ -12,11 +12,11 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2, Image as ImageIcon, Upload, FileText, ExternalLink, CalendarDays, PlayCircle } from "lucide-react";
 import { api, clearAuthToken, hasAuthToken, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
-import { readAdminNotices, writeAdminNotices, type AdminNotice } from "@/lib/notices";
-import { readWeeklyPhotos, writeWeeklyPhotos, type WeeklyPhoto } from "@/lib/weeklyPhotos";
-import { readFoundationMaterials, writeFoundationMaterials, type FoundationMaterial } from "@/lib/foundationMaterials";
-import { readScheduleImages, writeScheduleImages, type ScheduleImage } from "@/lib/scheduleImages";
-import { extractYoutubeVideoId, readLessonVideos, writeLessonVideos, type LessonVideo } from "@/lib/lessonVideos";
+import { type AdminNotice } from "@/lib/notices";
+import { type WeeklyPhoto } from "@/lib/weeklyPhotos";
+import { type FoundationMaterial } from "@/lib/foundationMaterials";
+import { type ScheduleImage } from "@/lib/scheduleImages";
+import { extractYoutubeVideoId, type LessonVideo } from "@/lib/lessonVideos";
 
 const TOTAL_RECITATIONS = 16;
 const TOTAL_QUIZZES = 18;
@@ -212,19 +212,22 @@ export default function AdminDashboardView({
       return;
     }
     setAuthenticated(true);
-    try {
-      setNotices(readAdminNotices());
-      setWeeklyPhotos(readWeeklyPhotos());
-      setFoundationMaterials(readFoundationMaterials());
-      setScheduleImages(readScheduleImages());
-      setLessonVideos(readLessonVideos());
-    } catch {
-      setNotices([]);
-      setWeeklyPhotos([]);
-      setFoundationMaterials([]);
-      setScheduleImages([]);
-      setLessonVideos([]);
-    }
+    Promise.all([
+      api.listAdminNotices(),
+      api.listWeeklyPhotos(),
+      api.listFoundationMaterials(),
+      api.listScheduleImages(),
+      api.listLessonVideos(),
+    ]).then(([nextNotices, nextPhotos, nextMaterials, nextSchedules, nextVideos]) => {
+      setNotices(nextNotices);
+      setWeeklyPhotos(nextPhotos);
+      setFoundationMaterials(nextMaterials);
+      setScheduleImages(nextSchedules);
+      setLessonVideos(nextVideos);
+    }).catch((error) => {
+      console.error("관리 콘텐츠 로드 실패", error);
+      setToast({ kind: "error", text: "관리 콘텐츠를 불러오지 못했습니다." });
+    });
     loadScores();
   }, [loadScores, router]);
 
@@ -249,12 +252,7 @@ export default function AdminDashboardView({
     }
   };
 
-  const saveNotices = (nextNotices: AdminNotice[]) => {
-    setNotices(nextNotices);
-    writeAdminNotices(nextNotices);
-  };
-
-  const handleAddNotice = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddNotice = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const title = noticeTitle.trim();
     const content = noticeContent.trim();
@@ -263,38 +261,31 @@ export default function AdminDashboardView({
       return;
     }
 
-    const nextNotice: AdminNotice = {
-      id: `${Date.now()}`,
-      title,
-      content,
-      createdAt: new Date().toISOString(),
-      showToTeachers: noticeShouldPopup,
-    };
-    saveNotices([nextNotice, ...notices]);
-    setNoticeTitle("");
-    setNoticeContent("");
-    setNoticeShouldPopup(false);
-    setToast({ kind: "success", text: noticeShouldPopup ? "선생님 팝업 공지를 등록했습니다." : "공지사항을 추가했습니다." });
-  };
-
-  const handleDeleteNotice = (noticeId: string) => {
-    saveNotices(notices.filter((notice) => notice.id !== noticeId));
-    setToast({ kind: "success", text: "공지사항을 삭제했습니다." });
-  };
-
-  const saveWeeklyPhotos = (nextPhotos: WeeklyPhoto[]) => {
     try {
-      writeWeeklyPhotos(nextPhotos);
-      setWeeklyPhotos(nextPhotos);
-      return true;
+      const nextNotice = await api.addNotice({ title, content, showToTeachers: noticeShouldPopup });
+      setNotices((current) => [nextNotice, ...current]);
+      setNoticeTitle("");
+      setNoticeContent("");
+      setNoticeShouldPopup(false);
+      setToast({ kind: "success", text: noticeShouldPopup ? "선생님 팝업 공지를 등록했습니다." : "공지사항을 추가했습니다." });
     } catch (error) {
-      console.error("사진 저장 실패", error);
-      setToast({ kind: "error", text: "사진 용량이 너무 큽니다. 더 작은 사진으로 추가해 주세요." });
-      return false;
+      console.error("공지 저장 실패", error);
+      setToast({ kind: "error", text: "공지사항을 저장하지 못했습니다." });
     }
   };
 
-  const handleAddWeeklyPhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDeleteNotice = async (noticeId: string) => {
+    try {
+      await api.deleteNotice(noticeId);
+      setNotices((current) => current.filter((notice) => notice.id !== noticeId));
+      setToast({ kind: "success", text: "공지사항을 삭제했습니다." });
+    } catch (error) {
+      console.error("공지 삭제 실패", error);
+      setToast({ kind: "error", text: "공지사항을 삭제하지 못했습니다." });
+    }
+  };
+
+  const handleAddWeeklyPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -304,49 +295,32 @@ export default function AdminDashboardView({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const imageUrl = typeof reader.result === "string" ? reader.result : "";
-      if (!imageUrl) {
-        setToast({ kind: "error", text: "사진을 읽는 중 오류가 발생했습니다." });
-        return;
-      }
-
-      const nextPhoto: WeeklyPhoto = {
-        id: `${Date.now()}`,
-        title: weeklyPhotoTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "이번 주 유치부 사진",
-        imageUrl,
-        createdAt: new Date().toISOString(),
-      };
-      const saved = saveWeeklyPhotos([nextPhoto, ...weeklyPhotos]);
-      if (!saved) return;
+    try {
+      const nextPhoto = await api.addWeeklyPhoto(
+        weeklyPhotoTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "이번 주 유치부 사진",
+        file
+      );
+      setWeeklyPhotos((current) => [nextPhoto, ...current]);
       setWeeklyPhotoTitle("");
       setToast({ kind: "success", text: "이번 주 유치부 사진을 추가했습니다." });
-    };
-    reader.onerror = () => {
-      setToast({ kind: "error", text: "사진을 읽는 중 오류가 발생했습니다." });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDeleteWeeklyPhoto = (photoId: string) => {
-    saveWeeklyPhotos(weeklyPhotos.filter((photo) => photo.id !== photoId));
-    setToast({ kind: "success", text: "이번 주 유치부 사진을 삭제했습니다." });
-  };
-
-  const saveFoundationMaterials = (nextMaterials: FoundationMaterial[]) => {
-    try {
-      writeFoundationMaterials(nextMaterials);
-      setFoundationMaterials(nextMaterials);
-      return true;
     } catch (error) {
-      console.error("머릿돌 PDF 저장 실패", error);
-      setToast({ kind: "error", text: "PDF 용량이 너무 큽니다. 더 작은 파일로 추가해 주세요." });
-      return false;
+      console.error("사진 저장 실패", error);
+      setToast({ kind: "error", text: "사진을 저장하지 못했습니다. 파일 크기와 형식을 확인해 주세요." });
     }
   };
 
-  const handleAddFoundationMaterial = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDeleteWeeklyPhoto = async (photoId: string) => {
+    try {
+      await api.deleteWeeklyPhoto(photoId);
+      setWeeklyPhotos((current) => current.filter((photo) => photo.id !== photoId));
+      setToast({ kind: "success", text: "이번 주 유치부 사진을 삭제했습니다." });
+    } catch (error) {
+      console.error("사진 삭제 실패", error);
+      setToast({ kind: "error", text: "사진을 삭제하지 못했습니다." });
+    }
+  };
+
+  const handleAddFoundationMaterial = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -356,71 +330,46 @@ export default function AdminDashboardView({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const pdfUrl = typeof reader.result === "string" ? reader.result : "";
-      if (!pdfUrl) {
-        setToast({ kind: "error", text: "PDF를 읽는 중 오류가 발생했습니다." });
-        return;
-      }
-
-      const nextMaterial: FoundationMaterial = {
-        id: `${Date.now()}`,
-        title: foundationTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "머릿돌",
-        fileName: file.name,
-        pdfUrl,
-        createdAt: new Date().toISOString(),
-        isActive: true,
-      };
-      const saved = saveFoundationMaterials([
+    try {
+      const nextMaterial = await api.addFoundationMaterial(
+        foundationTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "머릿돌",
+        file
+      );
+      setFoundationMaterials((current) => [
         nextMaterial,
-        ...foundationMaterials.map((material) => ({ ...material, isActive: false })),
+        ...current.map((material) => ({ ...material, isActive: false })),
       ]);
-      if (!saved) return;
       setFoundationTitle("");
       setToast({ kind: "success", text: "머릿돌 PDF를 추가하고 현재 자료로 설정했습니다." });
-    };
-    reader.onerror = () => {
-      setToast({ kind: "error", text: "PDF를 읽는 중 오류가 발생했습니다." });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleActivateFoundationMaterial = (materialId: string) => {
-    saveFoundationMaterials(
-      foundationMaterials.map((material) => ({
-        ...material,
-        isActive: material.id === materialId,
-      }))
-    );
-    setToast({ kind: "success", text: "선생님 화면에 표시할 머릿돌을 변경했습니다." });
-  };
-
-  const handleDeleteFoundationMaterial = (materialId: string) => {
-    const deletingActive = foundationMaterials.find((material) => material.id === materialId)?.isActive;
-    const nextMaterials = foundationMaterials.filter((material) => material.id !== materialId);
-    const normalizedMaterials =
-      deletingActive && nextMaterials.length > 0
-        ? nextMaterials.map((material, index) => ({ ...material, isActive: index === 0 }))
-        : nextMaterials;
-
-    saveFoundationMaterials(normalizedMaterials);
-    setToast({ kind: "success", text: "머릿돌 PDF를 삭제했습니다." });
-  };
-
-  const saveScheduleImages = (nextImages: ScheduleImage[]) => {
-    try {
-      writeScheduleImages(nextImages);
-      setScheduleImages(nextImages);
-      return true;
     } catch (error) {
-      console.error("계획표 이미지 저장 실패", error);
-      setToast({ kind: "error", text: "이미지 용량이 너무 큽니다. 더 작은 이미지로 추가해 주세요." });
-      return false;
+      console.error("머릿돌 PDF 저장 실패", error);
+      setToast({ kind: "error", text: "PDF를 저장하지 못했습니다. 파일 크기와 형식을 확인해 주세요." });
     }
   };
 
-  const handleAddScheduleImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleActivateFoundationMaterial = async (materialId: string) => {
+    try {
+      await api.activateFoundationMaterial(materialId);
+      setFoundationMaterials((current) => current.map((material) => ({ ...material, isActive: material.id === materialId })));
+      setToast({ kind: "success", text: "선생님 화면에 표시할 머릿돌을 변경했습니다." });
+    } catch (error) {
+      console.error("머릿돌 활성화 실패", error);
+      setToast({ kind: "error", text: "머릿돌을 변경하지 못했습니다." });
+    }
+  };
+
+  const handleDeleteFoundationMaterial = async (materialId: string) => {
+    try {
+      await api.deleteFoundationMaterial(materialId);
+      setFoundationMaterials(await api.listFoundationMaterials());
+      setToast({ kind: "success", text: "머릿돌 PDF를 삭제했습니다." });
+    } catch (error) {
+      console.error("머릿돌 삭제 실패", error);
+      setToast({ kind: "error", text: "머릿돌 PDF를 삭제하지 못했습니다." });
+    }
+  };
+
+  const handleAddScheduleImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -430,64 +379,46 @@ export default function AdminDashboardView({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const imageUrl = typeof reader.result === "string" ? reader.result : "";
-      if (!imageUrl) {
-        setToast({ kind: "error", text: "계획표 이미지를 읽는 중 오류가 발생했습니다." });
-        return;
-      }
-
-      const nextImage: ScheduleImage = {
-        id: `${Date.now()}`,
-        title: scheduleTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "계획표",
-        fileName: file.name,
-        imageUrl,
-        createdAt: new Date().toISOString(),
-        isActive: true,
-      };
-      const saved = saveScheduleImages([
+    try {
+      const nextImage = await api.addScheduleImage(
+        scheduleTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "계획표",
+        file
+      );
+      setScheduleImages((current) => [
         nextImage,
-        ...scheduleImages.map((image) => ({ ...image, isActive: false })),
+        ...current.map((image) => ({ ...image, isActive: false })),
       ]);
-      if (!saved) return;
       setScheduleTitle("");
       setToast({ kind: "success", text: "계획표 이미지를 추가하고 현재 계획표로 설정했습니다." });
-    };
-    reader.onerror = () => {
-      setToast({ kind: "error", text: "계획표 이미지를 읽는 중 오류가 발생했습니다." });
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("계획표 이미지 저장 실패", error);
+      setToast({ kind: "error", text: "계획표 이미지를 저장하지 못했습니다. 파일 크기와 형식을 확인해 주세요." });
+    }
   };
 
-  const handleActivateScheduleImage = (imageId: string) => {
-    saveScheduleImages(
-      scheduleImages.map((image) => ({
-        ...image,
-        isActive: image.id === imageId,
-      }))
-    );
-    setToast({ kind: "success", text: "선생님 화면에 표시할 계획표를 변경했습니다." });
+  const handleActivateScheduleImage = async (imageId: string) => {
+    try {
+      await api.activateScheduleImage(imageId);
+      setScheduleImages((current) => current.map((image) => ({ ...image, isActive: image.id === imageId })));
+      setToast({ kind: "success", text: "선생님 화면에 표시할 계획표를 변경했습니다." });
+    } catch (error) {
+      console.error("계획표 활성화 실패", error);
+      setToast({ kind: "error", text: "계획표를 변경하지 못했습니다." });
+    }
   };
 
-  const handleDeleteScheduleImage = (imageId: string) => {
-    const deletingActive = scheduleImages.find((image) => image.id === imageId)?.isActive;
-    const nextImages = scheduleImages.filter((image) => image.id !== imageId);
-    const normalizedImages =
-      deletingActive && nextImages.length > 0
-        ? nextImages.map((image, index) => ({ ...image, isActive: index === 0 }))
-        : nextImages;
-
-    saveScheduleImages(normalizedImages);
-    setToast({ kind: "success", text: "계획표 이미지를 삭제했습니다." });
+  const handleDeleteScheduleImage = async (imageId: string) => {
+    try {
+      await api.deleteScheduleImage(imageId);
+      setScheduleImages(await api.listScheduleImages());
+      setToast({ kind: "success", text: "계획표 이미지를 삭제했습니다." });
+    } catch (error) {
+      console.error("계획표 삭제 실패", error);
+      setToast({ kind: "error", text: "계획표 이미지를 삭제하지 못했습니다." });
+    }
   };
 
-  const saveLessonVideos = (nextVideos: LessonVideo[]) => {
-    writeLessonVideos(nextVideos);
-    setLessonVideos(nextVideos);
-  };
-
-  const handleAddLessonVideo = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddLessonVideo = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const title = lessonVideoTitle.trim();
     const url = lessonVideoUrl.trim();
@@ -512,16 +443,26 @@ export default function AdminDashboardView({
       createdAt: new Date().toISOString(),
     };
 
-    saveLessonVideos([nextVideo, ...lessonVideos]);
-    setLessonVideoTitle("");
-    setLessonVideoUrl("");
-    setLessonVideoDescription("");
-    setToast({ kind: "success", text: "공과 영상을 추가했습니다." });
+    try {
+      setLessonVideos(await api.replaceLessonVideos([nextVideo, ...lessonVideos]));
+      setLessonVideoTitle("");
+      setLessonVideoUrl("");
+      setLessonVideoDescription("");
+      setToast({ kind: "success", text: "공과 영상을 추가했습니다." });
+    } catch (error) {
+      console.error("공과 영상 저장 실패", error);
+      setToast({ kind: "error", text: "공과 영상을 저장하지 못했습니다." });
+    }
   };
 
-  const handleDeleteLessonVideo = (videoId: string) => {
-    saveLessonVideos(lessonVideos.filter((video) => video.id !== videoId));
-    setToast({ kind: "success", text: "공과 영상을 삭제했습니다." });
+  const handleDeleteLessonVideo = async (videoId: string) => {
+    try {
+      setLessonVideos(await api.replaceLessonVideos(lessonVideos.filter((video) => video.id !== videoId)));
+      setToast({ kind: "success", text: "공과 영상을 삭제했습니다." });
+    } catch (error) {
+      console.error("공과 영상 삭제 실패", error);
+      setToast({ kind: "error", text: "공과 영상을 삭제하지 못했습니다." });
+    }
   };
 
   if (!authenticated) return null;
