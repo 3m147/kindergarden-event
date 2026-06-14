@@ -3,6 +3,7 @@ package com.kindergarden.recitation.storage;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ public class GoogleCloudFileStorage implements PrivateFileStorage {
     private final Storage storage;
     private final String bucketName;
 
+    @Autowired
     public GoogleCloudFileStorage(@Value("${app.storage.bucket}") String bucketName) {
         this(StorageOptions.getDefaultInstance().getService(), bucketName);
     }
