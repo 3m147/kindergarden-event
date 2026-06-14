@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 @Service
@@ -89,7 +92,7 @@ public class SharedContentService {
         lessonVideoRepository.deleteAll();
         lessonVideoRepository.saveAll(videos.stream().map(v -> LessonVideo.builder()
                 .lessonNumber(v.lessonNumber()).title(v.title()).url(v.url()).videoId(v.videoId())
-                .pastor(v.pastor()).description(v.description()).createdAt(v.createdAt()).build()).toList());
+                .pastor(v.pastor()).description(v.description()).createdAt(parseCreatedAt(v.createdAt())).build()).toList());
         return lessonVideos();
     }
 
@@ -135,5 +138,14 @@ public class SharedContentService {
     private ScheduleImageDto scheduleDto(ScheduleImage v) { return new ScheduleImageDto(v.getId(), v.getTitle(), readUrl(v.getFile().getObjectKey()), v.getFile().getOriginalFileName(), v.getCreatedAt(), v.isActive()); }
     private FoundationMaterialDto foundationDto(FoundationMaterial v) { return new FoundationMaterialDto(v.getId(), v.getTitle(), v.getFile().getOriginalFileName(), readUrl(v.getFile().getObjectKey()), v.getCreatedAt(), v.isActive()); }
     private NoticeDto noticeDto(Notice v) { return new NoticeDto(v.getId(), v.getTitle(), v.getContent(), v.getCreatedAt(), v.isShowToTeachers()); }
-    private LessonVideoDto lessonDto(LessonVideo v) { return new LessonVideoDto(v.getId(), v.getLessonNumber(), v.getTitle(), v.getUrl(), v.getVideoId(), v.getPastor(), v.getDescription(), v.getCreatedAt()); }
+    private LessonVideoDto lessonDto(LessonVideo v) { return new LessonVideoDto(v.getId(), v.getLessonNumber(), v.getTitle(), v.getUrl(), v.getVideoId(), v.getPastor(), v.getDescription(), v.getCreatedAt() == null ? null : v.getCreatedAt().toString()); }
+
+    private LocalDateTime parseCreatedAt(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return OffsetDateTime.parse(value).toLocalDateTime();
+        } catch (DateTimeParseException ignored) {
+            return LocalDateTime.parse(value);
+        }
+    }
 }

@@ -1,8 +1,10 @@
 package com.kindergarden.recitation.service;
 
 import com.kindergarden.recitation.entity.FoundationMaterial;
+import com.kindergarden.recitation.entity.LessonVideo;
 import com.kindergarden.recitation.entity.ScheduleImage;
 import com.kindergarden.recitation.entity.StoredFile;
+import com.kindergarden.recitation.dto.LessonVideoDto;
 import com.kindergarden.recitation.repository.FoundationMaterialRepository;
 import com.kindergarden.recitation.repository.LessonVideoRepository;
 import com.kindergarden.recitation.repository.NoticeRepository;
@@ -21,10 +23,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,8 +56,8 @@ class SharedContentServiceTest {
                 lessonVideoRepository
         );
         ReflectionTestUtils.setField(service, "signedUrlMinutes", 15L);
-        when(storage.createReadUri(any(), any(Duration.class))).thenReturn(URI.create("https://signed.example/file"));
-        when(storedFileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(storage.createReadUri(any(), any(Duration.class))).thenReturn(URI.create("https://signed.example/file"));
+        lenient().when(storedFileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -79,6 +84,28 @@ class SharedContentServiceTest {
 
         assertThat(previous.isActive()).isFalse();
         assertThat(created.isActive()).isTrue();
+    }
+
+    @Test
+    void acceptsOffsetTimestampWhenReplacingLessonVideos() {
+        when(lessonVideoRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(lessonVideoRepository.findAllByOrderByLessonNumberAsc()).thenReturn(List.of());
+
+        service.replaceLessonVideos(List.of(new LessonVideoDto(
+                null,
+                1,
+                "1과 친구야 안녕",
+                "https://youtu.be/ZNTtW3CCioo",
+                "ZNTtW3CCioo",
+                "우병수 목사",
+                "",
+                "2026-01-04T00:00:00.000+09:00"
+        )));
+
+        var lessonCaptor = org.mockito.ArgumentCaptor.forClass(List.class);
+        org.mockito.Mockito.verify(lessonVideoRepository).saveAll(lessonCaptor.capture());
+        LessonVideo saved = (LessonVideo) lessonCaptor.getValue().get(0);
+        assertThat(saved.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 1, 4, 0, 0));
     }
 
     private MockMultipartFile imageFile() {
