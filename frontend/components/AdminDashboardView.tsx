@@ -719,6 +719,11 @@ export default function AdminDashboardView({
             const isExpanded = expandedClass === classId;
             const avgRecitation = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.lessonStates), 0) / group.students.length * 10) / 10;
             const avgQuiz = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.quizStates), 0) / group.students.length * 10) / 10;
+            const avgActivity = (type: string) =>
+              Math.round(group.students.reduce((sum, s) => sum + countKindergartenActivity(s, type), 0) / group.students.length * 10) / 10;
+            const avgAttendance = avgActivity("KINDERGARTEN_ATTENDANCE");
+            const avgKgRecitation = avgActivity("KINDERGARTEN_RECITATION");
+            const avgFoundation = avgActivity("KINDERGARTEN_FOUNDATION");
 
             return (
               <div key={classId} className="overflow-hidden rounded-2xl bg-slate-800 ring-1 ring-slate-700">
@@ -744,8 +749,18 @@ export default function AdminDashboardView({
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="hidden text-right sm:block">
-                      <p className="text-xs text-slate-400">평균 암송 <span className="font-bold text-emerald-400">{avgRecitation}</span>/{TOTAL_RECITATIONS}</p>
-                      <p className="text-xs text-slate-400">평균 퀴즈 <span className="font-bold text-sky-400">{avgQuiz}</span>/{TOTAL_QUIZZES}</p>
+                      {mode === "festival" ? (
+                        <>
+                          <p className="text-xs text-slate-400">평균 암송 <span className="font-bold text-emerald-400">{avgRecitation}</span>/{TOTAL_RECITATIONS}</p>
+                          <p className="text-xs text-slate-400">평균 퀴즈 <span className="font-bold text-sky-400">{avgQuiz}</span>/{TOTAL_QUIZZES}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-slate-400">평균 출석 <span className="font-bold text-amber-400">{avgAttendance}</span></p>
+                          <p className="text-xs text-slate-400">평균 암송 <span className="font-bold text-sky-400">{avgKgRecitation}</span></p>
+                          <p className="text-xs text-slate-400">평균 머릿돌 <span className="font-bold text-emerald-400">{avgFoundation}</span></p>
+                        </>
+                      )}
                     </div>
                     {isExpanded ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
                   </div>

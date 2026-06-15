@@ -76,7 +76,10 @@ export function getLessonStartDate(lessonNumber: number) {
 }
 
 export function getActiveLessonNumber(date = new Date()) {
-  const weekIndex = Math.floor((date.getTime() - FIRST_LESSON_START_DATE.getTime()) / WEEK_IN_MS);
+  // 공과는 그 주(월~일)의 '일요일' 기준이다. 오늘이 속한 주의 다가오는 일요일 공과가 "이번 주 공과".
+  // 예) 오늘이 월요일이면 이번 주 일요일 공과가 이번 주 공과가 되도록, 날짜(자정) 기준 ceil 로 계산한다.
+  const startOfToday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const weekIndex = Math.ceil((startOfToday.getTime() - FIRST_LESSON_START_DATE.getTime()) / WEEK_IN_MS);
   return Math.max(1, weekIndex + 1);
 }
 
