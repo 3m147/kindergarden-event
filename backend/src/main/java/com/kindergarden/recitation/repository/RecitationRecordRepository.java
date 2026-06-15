@@ -6,35 +6,31 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public interface RecitationRecordRepository extends JpaRepository<RecitationRecord, Long> {
 
-    Optional<RecitationRecord> findByStudentIdAndRecordDateAndLessonNumberAndType(
-        Long studentId, LocalDate date, Integer lessonNumber, String type);
+    // 체크는 "현재 상태"로 유지된다 — 날짜와 무관하게 (학생·과·종류)별 기록을 본다.
+    List<RecitationRecord> findByStudentIdAndLessonNumberAndType(
+        Long studentId, Integer lessonNumber, String type);
 
     @Query("""
         select r from RecitationRecord r
-        where r.student.classEntity.id = :classId and r.recordDate = :date
+        where r.student.classEntity.id = :classId
     """)
-    List<RecitationRecord> findByClassAndDate(@Param("classId") Long classId,
-                                              @Param("date") LocalDate date);
+    List<RecitationRecord> findByClass(@Param("classId") Long classId);
 
     @Modifying
     @Query("""
         update RecitationRecord r set r.submitted = true
-        where r.student.id = :studentId and r.recordDate = :date
+        where r.student.id = :studentId
     """)
-    int markSubmittedByStudentAndDate(@Param("studentId") Long studentId,
-                                      @Param("date") LocalDate date);
+    int markSubmittedByStudent(@Param("studentId") Long studentId);
 
     @Modifying
     @Query("""
         update RecitationRecord r set r.submitted = false
-        where r.student.id = :studentId and r.recordDate = :date
+        where r.student.id = :studentId
     """)
-    int markUnsubmittedByStudentAndDate(@Param("studentId") Long studentId,
-                                        @Param("date") LocalDate date);
+    int markUnsubmittedByStudent(@Param("studentId") Long studentId);
 }

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,14 +42,15 @@ public class RecitationService {
     @Transactional(readOnly = true)
     public List<StudentRecitationDto> getClassStatus(Long classId, LocalDate date) {
         List<Student> students = studentRepository.findByClassEntityIdOrderByNameAsc(classId);
-        List<RecitationRecord> records = recordRepository.findByClassAndDate(classId, date);
+        // 체크는 날짜와 무관하게 "현재 상태"로 유지된다 — 반 전체 기록을 가져온 뒤
+        // (학생·과·종류)별로 가장 최근 기록만 추려 현재 상태로 보여준다.
+        List<RecitationRecord> records = recordRepository.findByClass(classId);
 
-        // Group records by studentId
         Map<Long, List<RecitationRecord>> byStudent = records.stream()
                 .collect(Collectors.groupingBy(r -> r.getStudent().getId()));
 
         return students.stream().map(s -> {
-            List<RecitationRecord> studentRecords = byStudent.getOrDefault(s.getId(), List.of());
+            List<RecitationRecord> studentRecords = latestPerKey(byStudent.getOrDefault(s.getId(), List.of()));
             
             Map<Integer, String> lessonStates = new HashMap<>();
             Map<Integer, String> quizStates = new HashMap<>();
@@ -138,53 +140,71 @@ public class RecitationService {
     public StudentRecitationDto setRecitation(Long studentId, LocalDate date, Integer lessonNumber, String type, Boolean success, Long teacherId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
-        var existing = recordRepository.findByStudentIdAndRecordDateAndLessonNumberAndType(studentId, date, lessonNumber, type);
 
-        if (existing.map(RecitationRecord::isSubmitted).orElse(false)) {
+        // 날짜와 무관하게 (학생·과·종류)의 현재 기록을 찾아 상태를 갱신한다.
+        List<RecitationRecord> existing = recordRepository.findByStudentIdAndLessonNumberAndType(studentId, lessonNumber, type);
+        RecitationRecord latest = existing.stream().max(RecitationService::byRecency).orElse(null);
+
+        if (latest != null && latest.isSubmitted()) {
             throw new IllegalStateException("이미 제출된 기록은 수정할 수 없습니다.");
         }
 
         if (success == null) {
-            existing.ifPresent(recordRepository::delete);
-            return getClassStatus(student.getClassEntity().getId(), date)
-                    .stream()
-                    .filter(dto -> dto.studentId().equals(studentId))
-                    .findFirst()
-                    .orElseThrow();
+            // 체크 해제 — 해당 기능의 모든 기록을 지워 현재 상태를 비운다.
+            if (!existing.isEmpty()) recordRepository.deleteAll(existing);
+            return statusFor(student, studentId);
         }
 
-        RecitationRecord record = existing.orElseGet(() -> {
-            Teacher t = null;
-            if (teacherId != null && teacherId > 0) {
-                t = teacherRepository.findById(teacherId).orElse(null);
-            }
-            if (t == null) {
-                List<Teacher> teachers = teacherRepository.findByClassEntityIdOrderByNameAsc(student.getClassEntity().getId());
-                if (!teachers.isEmpty()) {
-                    t = teachers.get(0);
-                } else {
-                    t = teacherRepository.findAll().stream().findFirst().orElse(null);
-                }
-            }
-            if (t == null) {
-                throw new IllegalArgumentException("시스템에 등록된 교사가 없습니다. 교사를 먼저 등록해 주세요.");
-            }
-
-            return RecitationRecord.builder()
+        RecitationRecord record = latest;
+        if (record == null) {
+            record = RecitationRecord.builder()
                     .student(student)
                     .recordDate(date)
                     .lessonNumber(lessonNumber)
                     .type(type)
-                    .teacher(t)
+                    .teacher(resolveTeacher(teacherId, student))
                     .submitted(false)
                     .build();
-        });
-
+        }
         record.setResult(success ? "SUCCESS" : "FAIL");
         recordRepository.save(record);
-        
-        // Return full status for this student
-        return getClassStatus(student.getClassEntity().getId(), date)
+        return statusFor(student, studentId);
+    }
+
+    private static int byRecency(RecitationRecord a, RecitationRecord b) {
+        int c = a.getRecordDate().compareTo(b.getRecordDate());
+        if (c != 0) return c;
+        return a.getUpdatedAt().compareTo(b.getUpdatedAt());
+    }
+
+    // (학생 한 명의) 기록들을 (과·종류)별 최신 1건으로 추린다.
+    private List<RecitationRecord> latestPerKey(List<RecitationRecord> records) {
+        Map<String, RecitationRecord> latest = new HashMap<>();
+        for (RecitationRecord r : records) {
+            String key = r.getLessonNumber() + ":" + r.getType();
+            RecitationRecord current = latest.get(key);
+            if (current == null || byRecency(r, current) >= 0) latest.put(key, r);
+        }
+        return new ArrayList<>(latest.values());
+    }
+
+    private Teacher resolveTeacher(Long teacherId, Student student) {
+        Teacher t = null;
+        if (teacherId != null && teacherId > 0) {
+            t = teacherRepository.findById(teacherId).orElse(null);
+        }
+        if (t == null) {
+            List<Teacher> teachers = teacherRepository.findByClassEntityIdOrderByNameAsc(student.getClassEntity().getId());
+            t = !teachers.isEmpty() ? teachers.get(0) : teacherRepository.findAll().stream().findFirst().orElse(null);
+        }
+        if (t == null) {
+            throw new IllegalArgumentException("시스템에 등록된 교사가 없습니다. 교사를 먼저 등록해 주세요.");
+        }
+        return t;
+    }
+
+    private StudentRecitationDto statusFor(Student student, Long studentId) {
+        return getClassStatus(student.getClassEntity().getId(), LocalDate.now())
                 .stream()
                 .filter(dto -> dto.studentId().equals(studentId))
                 .findFirst()
@@ -195,27 +215,19 @@ public class RecitationService {
     public StudentRecitationDto submitStudent(Long studentId, LocalDate date) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
-        int updated = recordRepository.markSubmittedByStudentAndDate(studentId, date);
+        int updated = recordRepository.markSubmittedByStudent(studentId);
         if (updated == 0) {
             throw new IllegalStateException("제출할 기록이 없습니다.");
         }
-        return getClassStatus(student.getClassEntity().getId(), date)
-                .stream()
-                .filter(dto -> dto.studentId().equals(studentId))
-                .findFirst()
-                .orElseThrow();
+        return statusFor(student, studentId);
     }
 
     @Transactional
     public StudentRecitationDto unlockStudentSubmission(Long studentId, LocalDate date) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
-        recordRepository.markUnsubmittedByStudentAndDate(studentId, date);
-        return getClassStatus(student.getClassEntity().getId(), date)
-                .stream()
-                .filter(dto -> dto.studentId().equals(studentId))
-                .findFirst()
-                .orElseThrow();
+        recordRepository.markUnsubmittedByStudent(studentId);
+        return statusFor(student, studentId);
     }
 
     @Transactional(readOnly = true)
