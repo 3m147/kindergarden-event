@@ -1196,17 +1196,13 @@ function WeeklyPhotoSlider({
               ))}
             </div>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/10 via-slate-950/10 to-slate-950/82" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/5 via-transparent to-slate-950/22" />
           <div className="absolute right-4 top-4 rounded-full bg-white/92 px-3 py-1.5 text-xs font-extrabold text-slate-900 shadow-sm backdrop-blur transition group-active:scale-95 dark:bg-slate-950/80 dark:text-white">
             크게 보기
           </div>
           <div className="relative flex h-full flex-col justify-end px-5 pb-5 pt-5">
-            <p className="text-xs font-extrabold text-white/75">이번 주 기록</p>
-            <p className="mt-1 line-clamp-2 text-2xl font-extrabold leading-tight text-white drop-shadow">
-              {activePhoto.title}
-            </p>
             {showControls && (
-              <div className="mt-4 flex items-center gap-2" aria-hidden="true">
+              <div className="flex items-center gap-2" aria-hidden="true">
                 {photos.map((photo, index) => (
                   <span
                     key={photo.id}
@@ -1259,10 +1255,7 @@ function WeeklyPhotoSlider({
           className="fixed inset-0 z-[80] flex h-[100dvh] w-full flex-col bg-slate-950 text-white"
         >
           <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-[max(env(safe-area-inset-top),0.85rem)]">
-            <div className="min-w-0">
-              <p className="text-xs font-extrabold text-white/55">이번 주 유치부 사진</p>
-              <h2 className="mt-0.5 truncate text-base font-extrabold">{activePhoto.title}</h2>
-            </div>
+            <div className="min-w-0" />
             <button
               type="button"
               onClick={() => setViewerOpen(false)}
