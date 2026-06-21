@@ -96,9 +96,18 @@ public class SharedContentService {
         return lessonVideos();
     }
 
-    @Transactional public void deleteWeeklyPhoto(Long id) { WeeklyPhoto v = weeklyPhotoRepository.findById(id).orElseThrow(); deleteFileBacked(v, p -> weeklyPhotoRepository.delete((WeeklyPhoto) p), v.getFile()); }
-    @Transactional public void deleteScheduleImage(Long id) { ScheduleImage v = scheduleImageRepository.findById(id).orElseThrow(); deleteFileBacked(v, p -> scheduleImageRepository.delete((ScheduleImage) p), v.getFile()); }
-    @Transactional public void deleteFoundationMaterial(Long id) { FoundationMaterial v = foundationMaterialRepository.findById(id).orElseThrow(); deleteFileBacked(v, p -> foundationMaterialRepository.delete((FoundationMaterial) p), v.getFile()); }
+    @Transactional public void deleteWeeklyPhoto(Long id) {
+        WeeklyPhoto v = weeklyPhotoRepository.findById(id).orElseThrow();
+        deleteFileBacked(() -> weeklyPhotoRepository.delete(v), weeklyPhotoRepository::flush, v.getFile());
+    }
+    @Transactional public void deleteScheduleImage(Long id) {
+        ScheduleImage v = scheduleImageRepository.findById(id).orElseThrow();
+        deleteFileBacked(() -> scheduleImageRepository.delete(v), scheduleImageRepository::flush, v.getFile());
+    }
+    @Transactional public void deleteFoundationMaterial(Long id) {
+        FoundationMaterial v = foundationMaterialRepository.findById(id).orElseThrow();
+        deleteFileBacked(() -> foundationMaterialRepository.delete(v), foundationMaterialRepository::flush, v.getFile());
+    }
     @Transactional public void deleteNotice(Long id) { noticeRepository.deleteById(id); }
 
     @Transactional
@@ -132,7 +141,11 @@ public class SharedContentService {
     }
 
     private void cleanup(StoredFile file) { storage.delete(file.getObjectKey()); storedFileRepository.delete(file); }
-    private void deleteFileBacked(Object entity, java.util.function.Consumer<Object> deleter, StoredFile file) { deleter.accept(entity); cleanup(file); }
+    private void deleteFileBacked(Runnable deleteEntity, Runnable flushEntityDelete, StoredFile file) {
+        deleteEntity.run();
+        flushEntityDelete.run();
+        cleanup(file);
+    }
     private String title(String requested, StoredFile file) { return requested == null || requested.isBlank() ? file.getOriginalFileName() : requested.trim(); }
     private WeeklyPhotoDto weeklyDto(WeeklyPhoto v) { return new WeeklyPhotoDto(v.getId(), v.getTitle(), readUrl(v.getFile().getObjectKey()), v.getCreatedAt()); }
     private ScheduleImageDto scheduleDto(ScheduleImage v) { return new ScheduleImageDto(v.getId(), v.getTitle(), readUrl(v.getFile().getObjectKey()), v.getFile().getOriginalFileName(), v.getCreatedAt(), v.isActive()); }

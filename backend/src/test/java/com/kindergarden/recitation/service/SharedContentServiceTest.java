@@ -4,6 +4,7 @@ import com.kindergarden.recitation.entity.FoundationMaterial;
 import com.kindergarden.recitation.entity.LessonVideo;
 import com.kindergarden.recitation.entity.ScheduleImage;
 import com.kindergarden.recitation.entity.StoredFile;
+import com.kindergarden.recitation.entity.WeeklyPhoto;
 import com.kindergarden.recitation.dto.LessonVideoDto;
 import com.kindergarden.recitation.repository.FoundationMaterialRepository;
 import com.kindergarden.recitation.repository.LessonVideoRepository;
@@ -16,6 +17,7 @@ import com.kindergarden.recitation.storage.StoredObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
@@ -25,10 +27,12 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -106,6 +110,21 @@ class SharedContentServiceTest {
         org.mockito.Mockito.verify(lessonVideoRepository).saveAll(lessonCaptor.capture());
         LessonVideo saved = (LessonVideo) lessonCaptor.getValue().get(0);
         assertThat(saved.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 1, 4, 0, 0));
+    }
+
+    @Test
+    void deletesWeeklyPhotoBeforeRemovingStoredFile() {
+        StoredFile file = StoredFile.builder().objectKey("weekly/photo.jpg").build();
+        WeeklyPhoto photo = WeeklyPhoto.builder().file(file).build();
+        when(weeklyPhotoRepository.findById(1L)).thenReturn(Optional.of(photo));
+
+        service.deleteWeeklyPhoto(1L);
+
+        InOrder inOrder = inOrder(weeklyPhotoRepository, storage, storedFileRepository);
+        inOrder.verify(weeklyPhotoRepository).delete(photo);
+        inOrder.verify(weeklyPhotoRepository).flush();
+        inOrder.verify(storage).delete("weekly/photo.jpg");
+        inOrder.verify(storedFileRepository).delete(file);
     }
 
     private MockMultipartFile imageFile() {

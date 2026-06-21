@@ -96,7 +96,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     try { msg = JSON.parse(msg).message || msg; } catch {}
     throw new Error(msg || `API Error: ${res.status}`);
   }
-  return (res.status === 204 ? (undefined as T) : ((await res.json()) as T));
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 function uploadContent<T>(path: string, title: string, file: File) {
