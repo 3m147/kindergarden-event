@@ -9,7 +9,18 @@ export type FoundationMaterial = {
   pdfUrl: string;
   createdAt: string;
   isActive: boolean;
+  ageGroup?: FoundationAgeGroup;
 };
+
+export type FoundationAgeGroup = "AGE_3_4" | "AGE_5";
+
+export function getFoundationAgeGroupForClass(className?: string | null): FoundationAgeGroup {
+  return className?.includes("만 5") ? "AGE_5" : "AGE_3_4";
+}
+
+export function getFoundationAgeGroupLabel(ageGroup: FoundationAgeGroup) {
+  return ageGroup === "AGE_5" ? "5세" : "3,4세";
+}
 
 export function readFoundationMaterials() {
   const savedMaterials = localStorage.getItem(FOUNDATION_MATERIALS_STORAGE_KEY);
@@ -22,6 +33,7 @@ export function writeFoundationMaterials(materials: FoundationMaterial[]) {
   localStorage.setItem(FOUNDATION_MATERIALS_STORAGE_KEY, JSON.stringify(materials));
 }
 
-export function getActiveFoundationMaterial(materials = readFoundationMaterials()) {
-  return materials.find((material) => material.isActive) ?? materials[0] ?? null;
+export function getActiveFoundationMaterial(materials = readFoundationMaterials(), ageGroup: FoundationAgeGroup = "AGE_3_4") {
+  const groupedMaterials = materials.filter((material) => (material.ageGroup ?? "AGE_3_4") === ageGroup);
+  return groupedMaterials.find((material) => material.isActive) ?? groupedMaterials[0] ?? null;
 }

@@ -3,22 +3,24 @@
 import * as React from "react";
 import { Download, FileText, Maximize2, Minimize2, Smartphone } from "lucide-react";
 import { api } from "@/lib/api";
-import { getActiveFoundationMaterial, type FoundationMaterial } from "@/lib/foundationMaterials";
+import { getActiveFoundationMaterial, getFoundationAgeGroupForClass, getFoundationAgeGroupLabel, type FoundationMaterial } from "@/lib/foundationMaterials";
 
 type FoundationViewProps = {
   pdfUrl?: string;
+  className?: string;
 };
 
-export default function FoundationView({ pdfUrl = "/foundation.pdf" }: FoundationViewProps) {
+export default function FoundationView({ pdfUrl = "/foundation.pdf", className }: FoundationViewProps) {
   const [activeMaterial, setActiveMaterial] = React.useState<FoundationMaterial | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = React.useState(false);
   const fullscreenRef = React.useRef<HTMLDivElement | null>(null);
+  const ageGroup = getFoundationAgeGroupForClass(className);
 
   React.useEffect(() => {
     api.listFoundationMaterials()
-      .then((materials) => setActiveMaterial(getActiveFoundationMaterial(materials)))
+      .then((materials) => setActiveMaterial(getActiveFoundationMaterial(materials, ageGroup)))
       .catch(() => setActiveMaterial(null));
-  }, []);
+  }, [ageGroup]);
 
   React.useEffect(() => {
     if (!fullscreenOpen) return;
@@ -89,7 +91,7 @@ export default function FoundationView({ pdfUrl = "/foundation.pdf" }: Foundatio
         <div className="min-w-0">
           <h2 className="break-words text-base font-extrabold text-slate-800 dark:text-slate-100">{currentTitle}</h2>
           <p className="mt-1 text-sm font-bold leading-6 text-slate-500 dark:text-slate-400">
-            모바일에서 PDF가 작게 보이면 전체화면으로 돌려 한 페이지씩 확인할 수 있습니다.
+            {getFoundationAgeGroupLabel(ageGroup)} 머릿돌입니다. 모바일에서 PDF가 작게 보이면 전체화면으로 확인할 수 있습니다.
           </p>
           {activeMaterial && (
             <p className="mt-1 truncate text-xs font-extrabold text-pastel-greenDeep dark:text-emerald-300">

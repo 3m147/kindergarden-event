@@ -27,6 +27,8 @@ public class SharedContentService {
     private final NoticeRepository noticeRepository;
     private final LessonVideoRepository lessonVideoRepository;
 
+    private static final String DEFAULT_FOUNDATION_AGE_GROUP = "AGE_3_4";
+
     @Value("${app.storage.signed-url-minutes:15}")
     private long signedUrlMinutes;
 
@@ -69,10 +71,21 @@ public class SharedContentService {
 
     @Transactional
     public FoundationMaterialDto createFoundationMaterial(String title, MultipartFile multipart, Long creatorId, String creatorType) {
+        return createFoundationMaterial(title, multipart, creatorId, creatorType, DEFAULT_FOUNDATION_AGE_GROUP);
+    }
+
+    @Transactional
+    public FoundationMaterialDto createFoundationMaterial(String title, MultipartFile multipart, Long creatorId, String creatorType, String ageGroup) {
+        String normalizedAgeGroup = normalizeFoundationAgeGroup(ageGroup);
         StoredFile file = store(StoredFileCategory.FOUNDATION_PDF, multipart, creatorId, creatorType);
         try {
-            foundationMaterialRepository.findAll().forEach(item -> item.setActive(false));
-            return foundationDto(foundationMaterialRepository.save(FoundationMaterial.builder().title(title(title, file)).file(file).active(true).build()));
+            foundationMaterialRepository.findByAgeGroupOrderByCreatedAtDesc(normalizedAgeGroup).forEach(item -> item.setActive(false));
+            return foundationDto(foundationMaterialRepository.save(FoundationMaterial.builder()
+                    .title(title(title, file))
+                    .file(file)
+                    .active(true)
+                    .ageGroup(normalizedAgeGroup)
+                    .build()));
         } catch (RuntimeException e) {
             cleanup(file);
             throw e;
@@ -120,8 +133,10 @@ public class SharedContentService {
 
     @Transactional
     public FoundationMaterialDto activateFoundationMaterial(Long id) {
-        foundationMaterialRepository.findAll().forEach(item -> item.setActive(false));
         FoundationMaterial target = foundationMaterialRepository.findById(id).orElseThrow();
+        String ageGroup = normalizeFoundationAgeGroup(target.getAgeGroup());
+        foundationMaterialRepository.findByAgeGroupOrderByCreatedAtDesc(ageGroup).forEach(item -> item.setActive(false));
+        target.setAgeGroup(ageGroup);
         target.setActive(true);
         return foundationDto(target);
     }
@@ -149,9 +164,13 @@ public class SharedContentService {
     private String title(String requested, StoredFile file) { return requested == null || requested.isBlank() ? file.getOriginalFileName() : requested.trim(); }
     private WeeklyPhotoDto weeklyDto(WeeklyPhoto v) { return new WeeklyPhotoDto(v.getId(), v.getTitle(), readUrl(v.getFile().getObjectKey()), v.getCreatedAt()); }
     private ScheduleImageDto scheduleDto(ScheduleImage v) { return new ScheduleImageDto(v.getId(), v.getTitle(), readUrl(v.getFile().getObjectKey()), v.getFile().getOriginalFileName(), v.getCreatedAt(), v.isActive()); }
-    private FoundationMaterialDto foundationDto(FoundationMaterial v) { return new FoundationMaterialDto(v.getId(), v.getTitle(), v.getFile().getOriginalFileName(), readUrl(v.getFile().getObjectKey()), v.getCreatedAt(), v.isActive()); }
+    private FoundationMaterialDto foundationDto(FoundationMaterial v) { return new FoundationMaterialDto(v.getId(), v.getTitle(), v.getFile().getOriginalFileName(), readUrl(v.getFile().getObjectKey()), v.getCreatedAt(), v.isActive(), normalizeFoundationAgeGroup(v.getAgeGroup())); }
     private NoticeDto noticeDto(Notice v) { return new NoticeDto(v.getId(), v.getTitle(), v.getContent(), v.getCreatedAt(), v.isShowToTeachers()); }
     private LessonVideoDto lessonDto(LessonVideo v) { return new LessonVideoDto(v.getId(), v.getLessonNumber(), v.getTitle(), v.getUrl(), v.getVideoId(), v.getPastor(), v.getDescription(), v.getCreatedAt() == null ? null : v.getCreatedAt().toString()); }
+
+    private String normalizeFoundationAgeGroup(String ageGroup) {
+        return "AGE_5".equals(ageGroup) ? "AGE_5" : DEFAULT_FOUNDATION_AGE_GROUP;
+    }
 
     private LocalDateTime parseCreatedAt(String value) {
         if (value == null || value.isBlank()) return null;

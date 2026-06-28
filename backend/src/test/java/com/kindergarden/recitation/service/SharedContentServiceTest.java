@@ -79,8 +79,8 @@ class SharedContentServiceTest {
 
     @Test
     void newlyUploadedFoundationBecomesTheOnlyActiveFoundation() {
-        FoundationMaterial previous = FoundationMaterial.builder().active(true).build();
-        when(foundationMaterialRepository.findAll()).thenReturn(List.of(previous));
+        FoundationMaterial previous = FoundationMaterial.builder().active(true).ageGroup("AGE_3_4").build();
+        when(foundationMaterialRepository.findByAgeGroupOrderByCreatedAtDesc("AGE_3_4")).thenReturn(List.of(previous));
         when(foundationMaterialRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(storage.upload(any(), any())).thenReturn(new StoredObject("foundation/new.pdf", "new.pdf", "application/pdf", 10));
 
@@ -88,6 +88,23 @@ class SharedContentServiceTest {
 
         assertThat(previous.isActive()).isFalse();
         assertThat(created.isActive()).isTrue();
+        assertThat(created.ageGroup()).isEqualTo("AGE_3_4");
+    }
+
+    @Test
+    void newlyUploadedFoundationOnlyReplacesActiveMaterialInSameAgeGroup() {
+        FoundationMaterial age34 = FoundationMaterial.builder().active(true).ageGroup("AGE_3_4").build();
+        FoundationMaterial age5 = FoundationMaterial.builder().active(true).ageGroup("AGE_5").build();
+        when(foundationMaterialRepository.findByAgeGroupOrderByCreatedAtDesc("AGE_5")).thenReturn(List.of(age5));
+        when(foundationMaterialRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(storage.upload(any(), any())).thenReturn(new StoredObject("foundation/age5.pdf", "age5.pdf", "application/pdf", 10));
+
+        var created = service.createFoundationMaterial("5세 머릿돌", pdfFile(), 1L, "ADMIN", "AGE_5");
+
+        assertThat(age34.isActive()).isTrue();
+        assertThat(age5.isActive()).isFalse();
+        assertThat(created.isActive()).isTrue();
+        assertThat(created.ageGroup()).isEqualTo("AGE_5");
     }
 
     @Test

@@ -827,7 +827,7 @@ export default function StartView() {
               <ScheduleView image={activeScheduleImage} />
             )}
             {activeBottomTab === "foundation" && (
-              <FoundationView />
+              <FoundationView className={loggedIn.className} />
             )}
             {activeBottomTab === "lessons" && (
               <LessonVideoLibrary videos={lessonVideos} activeVideo={activeLessonVideo} />

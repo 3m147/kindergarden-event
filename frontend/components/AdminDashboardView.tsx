@@ -14,7 +14,7 @@ import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, Ch
 import { api, clearAuthToken, hasAuthToken, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 import { type AdminNotice } from "@/lib/notices";
 import { type WeeklyPhoto } from "@/lib/weeklyPhotos";
-import { type FoundationMaterial } from "@/lib/foundationMaterials";
+import { getFoundationAgeGroupLabel, type FoundationAgeGroup, type FoundationMaterial } from "@/lib/foundationMaterials";
 import { type ScheduleImage } from "@/lib/scheduleImages";
 import { extractYoutubeVideoId, type LessonVideo } from "@/lib/lessonVideos";
 
@@ -131,6 +131,7 @@ export default function AdminDashboardView({
   const [weeklyPhotoTitle, setWeeklyPhotoTitle] = React.useState("");
   const [foundationMaterials, setFoundationMaterials] = React.useState<FoundationMaterial[]>([]);
   const [foundationTitle, setFoundationTitle] = React.useState("");
+  const [foundationAgeGroup, setFoundationAgeGroup] = React.useState<FoundationAgeGroup>("AGE_3_4");
   const [scheduleImages, setScheduleImages] = React.useState<ScheduleImage[]>([]);
   const [scheduleTitle, setScheduleTitle] = React.useState("");
   const [lessonVideos, setLessonVideos] = React.useState<LessonVideo[]>([]);
@@ -333,14 +334,15 @@ export default function AdminDashboardView({
     try {
       const nextMaterial = await api.addFoundationMaterial(
         foundationTitle.trim() || file.name.replace(/\.[^/.]+$/, "") || "머릿돌",
-        file
+        file,
+        foundationAgeGroup
       );
       setFoundationMaterials((current) => [
         nextMaterial,
-        ...current.map((material) => ({ ...material, isActive: false })),
+        ...current.map((material) => (material.ageGroup ?? "AGE_3_4") === nextMaterial.ageGroup ? { ...material, isActive: false } : material),
       ]);
       setFoundationTitle("");
-      setToast({ kind: "success", text: "머릿돌 PDF를 추가하고 현재 자료로 설정했습니다." });
+      setToast({ kind: "success", text: `${getFoundationAgeGroupLabel(foundationAgeGroup)} 머릿돌 PDF를 추가하고 현재 자료로 설정했습니다.` });
     } catch (error) {
       console.error("머릿돌 PDF 저장 실패", error);
       setToast({ kind: "error", text: "PDF를 저장하지 못했습니다. 파일 크기와 형식을 확인해 주세요." });
@@ -350,7 +352,11 @@ export default function AdminDashboardView({
   const handleActivateFoundationMaterial = async (materialId: string) => {
     try {
       await api.activateFoundationMaterial(materialId);
-      setFoundationMaterials((current) => current.map((material) => ({ ...material, isActive: material.id === materialId })));
+      setFoundationMaterials((current) => {
+        const target = current.find((material) => material.id === materialId);
+        const targetAgeGroup = target?.ageGroup ?? "AGE_3_4";
+        return current.map((material) => (material.ageGroup ?? "AGE_3_4") === targetAgeGroup ? { ...material, isActive: material.id === materialId } : material);
+      });
       setToast({ kind: "success", text: "선생님 화면에 표시할 머릿돌을 변경했습니다." });
     } catch (error) {
       console.error("머릿돌 활성화 실패", error);
@@ -668,7 +674,9 @@ export default function AdminDashboardView({
         <FoundationManager
           materials={foundationMaterials}
           title={foundationTitle}
+          ageGroup={foundationAgeGroup}
           onTitleChange={setFoundationTitle}
+          onAgeGroupChange={setFoundationAgeGroup}
           onAdd={handleAddFoundationMaterial}
           onActivate={handleActivateFoundationMaterial}
           onDelete={handleDeleteFoundationMaterial}
@@ -1217,18 +1225,25 @@ function NoticeManager({
 function FoundationManager({
   materials,
   title,
+  ageGroup,
   onTitleChange,
+  onAgeGroupChange,
   onAdd,
   onActivate,
   onDelete,
 }: {
   materials: FoundationMaterial[];
   title: string;
+  ageGroup: FoundationAgeGroup;
   onTitleChange: (value: string) => void;
+  onAgeGroupChange: (value: FoundationAgeGroup) => void;
   onAdd: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onActivate: (materialId: string) => void;
   onDelete: (materialId: string) => void;
 }) {
+  const activeMaterialByGroup = (targetAgeGroup: FoundationAgeGroup) =>
+    materials.find((material) => (material.ageGroup ?? "AGE_3_4") === targetAgeGroup && material.isActive);
+
   return (
     <section className="px-5 pt-4">
       <section className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
@@ -1242,6 +1257,25 @@ function FoundationManager({
           <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
             {materials.length}개
           </span>
+        </div>
+
+        <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-900 p-1 ring-1 ring-slate-700">
+          {(["AGE_3_4", "AGE_5"] as const).map((group) => (
+            <button
+              key={group}
+              type="button"
+              onClick={() => onAgeGroupChange(group)}
+              className={cn(
+                "h-10 rounded-lg text-sm font-extrabold transition active:scale-[0.98]",
+                ageGroup === group
+                  ? "bg-emerald-500 text-white shadow"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              )}
+              aria-pressed={ageGroup === group}
+            >
+              {getFoundationAgeGroupLabel(group)}
+            </button>
+          ))}
         </div>
 
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
@@ -1266,9 +1300,13 @@ function FoundationManager({
 
       <div className="mt-5 flex items-center justify-between">
         <h2 className="text-base font-extrabold text-slate-300">등록된 머릿돌</h2>
-        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
-          현재 {materials.find((material) => material.isActive)?.title ?? "없음"}
-        </span>
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {(["AGE_3_4", "AGE_5"] as const).map((group) => (
+            <span key={group} className="rounded-full bg-slate-800 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+              {getFoundationAgeGroupLabel(group)} {activeMaterialByGroup(group)?.title ?? "없음"}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-col gap-3">
@@ -1284,6 +1322,9 @@ function FoundationManager({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="break-words text-base font-extrabold text-white">{material.title}</h3>
+                  <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-extrabold text-slate-300 ring-1 ring-slate-700">
+                    {getFoundationAgeGroupLabel((material.ageGroup ?? "AGE_3_4") as FoundationAgeGroup)}
+                  </span>
                   {material.isActive && (
                     <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-extrabold text-emerald-300 ring-1 ring-emerald-400/30">
                       현재 표시 중

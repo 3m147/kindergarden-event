@@ -33,8 +33,8 @@ public class SharedContentController {
     @PutMapping("/api/admin/content/schedule-images/{id}/active") public ScheduleImageDto activateSchedule(@PathVariable Long id) { return service.activateScheduleImage(id); }
     @DeleteMapping("/api/admin/content/schedule-images/{id}") public void deleteSchedule(@PathVariable Long id) { service.deleteScheduleImage(id); }
     @PostMapping("/api/admin/content/foundation-materials")
-    public FoundationMaterialDto addFoundation(@RequestParam(required = false) String title, @RequestParam MultipartFile file, @org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
-        return service.createFoundationMaterial(title, file, jwt.getClaim("userId"), "ADMIN");
+    public FoundationMaterialDto addFoundation(@RequestParam(required = false) String title, @RequestParam(required = false) String ageGroup, @RequestParam MultipartFile file, @org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
+        return service.createFoundationMaterial(title, file, jwt.getClaim("userId"), "ADMIN", ageGroup);
     }
     @PutMapping("/api/admin/content/foundation-materials/{id}/active") public FoundationMaterialDto activateFoundation(@PathVariable Long id) { return service.activateFoundationMaterial(id); }
     @DeleteMapping("/api/admin/content/foundation-materials/{id}") public void deleteFoundation(@PathVariable Long id) { service.deleteFoundationMaterial(id); }

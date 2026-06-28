@@ -102,9 +102,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-function uploadContent<T>(path: string, title: string, file: File) {
+function uploadContent<T>(path: string, title: string, file: File, fields?: Record<string, string>) {
   const formData = new FormData();
   formData.append("title", title);
+  Object.entries(fields ?? {}).forEach(([key, value]) => formData.append(key, value));
   formData.append("file", file);
   return request<T>(path, { method: "POST", body: formData });
 }
@@ -190,7 +191,7 @@ export const api = {
   deleteScheduleImage: (id: string) => request<void>(`/api/admin/content/schedule-images/${id}`, { method: "DELETE" }),
 
   listFoundationMaterials: () => request<FoundationMaterial[]>("/api/content/foundation-materials").then(listWithStringIds),
-  addFoundationMaterial: (title: string, file: File) => uploadContent<FoundationMaterial>("/api/admin/content/foundation-materials", title, file).then(withStringId),
+  addFoundationMaterial: (title: string, file: File, ageGroup = "AGE_3_4") => uploadContent<FoundationMaterial>("/api/admin/content/foundation-materials", title, file, { ageGroup }).then(withStringId),
   activateFoundationMaterial: (id: string) => request<FoundationMaterial>(`/api/admin/content/foundation-materials/${id}/active`, { method: "PUT" }).then(withStringId),
   deleteFoundationMaterial: (id: string) => request<void>(`/api/admin/content/foundation-materials/${id}`, { method: "DELETE" }),
 
