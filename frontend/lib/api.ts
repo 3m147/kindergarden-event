@@ -94,7 +94,10 @@ export type PersonProfileDto = {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = init?.body instanceof FormData;
-  const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+  // 로그인 요청에는 토큰을 붙이지 않는다. 만료된 토큰이 남아 있으면 서버가 로그인 로직에
+  // 닿기도 전에 401 로 막아버려, 재로그인조차 못 하고 갇히기 때문이다.
+  const isAuthRequest = path.startsWith("/api/auth/");
+  const token = !isAuthRequest && typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
   const headers = isFormData 
     ? { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) }
     : { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) };
