@@ -23,6 +23,19 @@ export function hasAuthToken() {
   return typeof window !== "undefined" && Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
 }
 
+// 토큰이 만료되면 서버가 401을 준다. 이때 남아있는 세션을 지우고 로그인 화면으로 보내지 않으면
+// 만료된 토큰을 계속 들고 요청해 화면이 401로 갇힌다. 아래에서 자동으로 복구한다.
+let redirectingToLogin = false;
+
+function handleUnauthorized() {
+  if (typeof window === "undefined" || redirectingToLogin) return;
+  redirectingToLogin = true;
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem("teacher_info");
+  localStorage.removeItem("admin_authenticated");
+  window.location.replace(window.location.pathname.startsWith("/admin") ? "/admin" : "/");
+}
+
 export function resolveMediaUrl(url?: string | null) {
   const value = url?.trim();
   if (!value) return "";
@@ -91,6 +104,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
     cache: "no-store",
   });
+  // 로그인 실패도 401을 주므로 인증 요청 자체는 제외한다 (비밀번호 오류는 화면에서 안내).
+  if (res.status === 401 && !path.startsWith("/api/auth/")) {
+    handleUnauthorized();
+    throw new Error("세션이 만료되었습니다. 다시 로그인해 주세요.");
+  }
   if (!res.ok) {
     let msg = await res.text();
     try { msg = JSON.parse(msg).message || msg; } catch {}
