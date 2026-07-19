@@ -1,5 +1,6 @@
 package com.kindergarden.recitation.service;
 
+import com.kindergarden.recitation.band.InMemoryMultipartFile;
 import com.kindergarden.recitation.dto.*;
 import com.kindergarden.recitation.entity.*;
 import com.kindergarden.recitation.repository.*;
@@ -50,7 +51,22 @@ public class SharedContentService {
     public WeeklyPhotoDto createWeeklyPhoto(String title, MultipartFile multipart, Long creatorId, String creatorType) {
         StoredFile file = store(StoredFileCategory.WEEKLY_PHOTO, multipart, creatorId, creatorType);
         try {
-            return weeklyDto(weeklyPhotoRepository.save(WeeklyPhoto.builder().title(title(title, file)).file(file).build()));
+            return weeklyDto(weeklyPhotoRepository.save(WeeklyPhoto.builder().title(title(title, file)).file(file).source("MANUAL").build()));
+        } catch (RuntimeException e) {
+            cleanup(file);
+            throw e;
+        }
+    }
+
+    // 네이버 밴드에서 내려받은 사진 바이트를 주간 사진으로 저장한다 (기존 업로드 경로 재사용).
+    @Transactional
+    public WeeklyPhotoDto importBandWeeklyPhoto(String title, byte[] data, String filename, String contentType, String sourcePhotoKey) {
+        MultipartFile multipart = new InMemoryMultipartFile("file", filename, contentType, data);
+        StoredFile file = store(StoredFileCategory.WEEKLY_PHOTO, multipart, null, "BAND");
+        try {
+            String finalTitle = (title == null || title.isBlank()) ? file.getOriginalFileName() : title.trim();
+            return weeklyDto(weeklyPhotoRepository.save(WeeklyPhoto.builder()
+                    .title(finalTitle).file(file).source("BAND").sourcePhotoKey(sourcePhotoKey).build()));
         } catch (RuntimeException e) {
             cleanup(file);
             throw e;

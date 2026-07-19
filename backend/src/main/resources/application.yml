@@ -43,3 +43,11 @@ app:
   # CORS 허용 오리진 (콤마 구분). 운영 시 Vercel 도메인 추가.
   # 예: APP_ALLOWED_ORIGINS=https://my-app.vercel.app,http://localhost:3000,http://localhost:3001
   allowed-origins: ${APP_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+
+# 네이버 밴드 연동. client-id/secret 은 OAuth 코드 교환에만 필요(토큰 직접 붙여넣기 방식이면 불필요).
+# 심사 통과 후 발급받은 값을 Cloud Run 환경변수로 넣으면 된다.
+band:
+  client-id: ${BAND_CLIENT_ID:}
+  client-secret: ${BAND_CLIENT_SECRET:}
+  api-base-url: ${BAND_API_BASE_URL:https://openapi.band.us}
+  auth-base-url: ${BAND_AUTH_BASE_URL:https://auth.band.us}

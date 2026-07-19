@@ -10,8 +10,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2, Image as ImageIcon, Upload, FileText, ExternalLink, CalendarDays, PlayCircle } from "lucide-react";
-import { api, clearAuthToken, hasAuthToken, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
+import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2, Image as ImageIcon, Upload, FileText, ExternalLink, CalendarDays, PlayCircle, Save } from "lucide-react";
+import { api, clearAuthToken, hasAuthToken, resolveMediaUrl, type BandConfig, type BandOption, type StudentRecitationDto } from "@/lib/api";
 import { type AdminNotice } from "@/lib/notices";
 import { type WeeklyPhoto } from "@/lib/weeklyPhotos";
 import { getFoundationAgeGroupLabel, type FoundationAgeGroup, type FoundationMaterial } from "@/lib/foundationMaterials";
@@ -116,7 +116,7 @@ export default function AdminDashboardView({
   const router = useRouter();
   const [authenticated, setAuthenticated] = React.useState(false);
   const [mode, setMode] = React.useState<"festival" | "kindergarten">(initialMode);
-  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice" | "schedule" | "foundation" | "lesson">(initialMode);
+  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice" | "schedule" | "foundation" | "lesson" | "band">(initialMode);
   const [expandedClass, setExpandedClass] = React.useState<number | null>(null);
   const [expandedStudent, setExpandedStudent] = React.useState<number | null>(null);
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
@@ -138,6 +138,12 @@ export default function AdminDashboardView({
   const [lessonVideoTitle, setLessonVideoTitle] = React.useState("");
   const [lessonVideoUrl, setLessonVideoUrl] = React.useState("");
   const [lessonVideoDescription, setLessonVideoDescription] = React.useState("");
+  const [bandConfig, setBandConfig] = React.useState<BandConfig | null>(null);
+  const [bandAccessToken, setBandAccessToken] = React.useState("");
+  const [bandList, setBandList] = React.useState<BandOption[]>([]);
+  const [bandAlbumList, setBandAlbumList] = React.useState<BandOption[]>([]);
+  const [bandBusy, setBandBusy] = React.useState(false);
+  const [bandMessage, setBandMessage] = React.useState<string | null>(null);
 
   const [subTab, setSubTab] = React.useState<"check" | "chart">("check");
   const [selectedBookId, setSelectedBookId] = React.useState(1);
@@ -237,6 +243,72 @@ export default function AdminDashboardView({
     clearAuthToken();
     router.replace("/admin");
   };
+
+  const runBand = async (fn: () => Promise<void>, errorText: string) => {
+    setBandBusy(true);
+    setBandMessage(null);
+    try {
+      await fn();
+    } catch (e) {
+      setBandMessage(errorText + (e instanceof Error && e.message ? ` (${e.message})` : ""));
+    } finally {
+      setBandBusy(false);
+    }
+  };
+
+  const handleBandSaveToken = () =>
+    runBand(async () => {
+      const cfg = await api.saveBandConfig({ accessToken: bandAccessToken });
+      setBandConfig(cfg);
+      setBandAccessToken("");
+      setBandMessage("액세스 토큰을 저장했습니다.");
+    }, "토큰 저장에 실패했습니다.");
+
+  const handleBandLoadBands = () =>
+    runBand(async () => {
+      const bands = await api.listBandBands();
+      setBandList(bands);
+      setBandMessage(bands.length ? `밴드 ${bands.length}개를 불러왔습니다.` : "밴드가 없습니다.");
+    }, "밴드 목록을 불러오지 못했습니다.");
+
+  const handleBandSelectBand = (bandKey: string) =>
+    runBand(async () => {
+      const cfg = await api.saveBandConfig({ bandKey });
+      setBandConfig(cfg);
+      const albums = await api.listBandAlbums(bandKey);
+      setBandAlbumList(albums);
+      setBandMessage(`앨범 ${albums.length}개를 불러왔습니다.`);
+    }, "앨범 목록을 불러오지 못했습니다.");
+
+  const handleBandSelectAlbum = (photoAlbumKey: string) =>
+    runBand(async () => {
+      const cfg = await api.saveBandConfig({ photoAlbumKey });
+      setBandConfig(cfg);
+      setBandMessage("앨범을 선택했습니다.");
+    }, "앨범 선택에 실패했습니다.");
+
+  const handleBandToggleEnabled = (enabled: boolean) =>
+    runBand(async () => {
+      const cfg = await api.saveBandConfig({ enabled });
+      setBandConfig(cfg);
+      setBandMessage(enabled ? "자동 동기화를 켰습니다." : "자동 동기화를 껐습니다.");
+    }, "설정 저장에 실패했습니다.");
+
+  const handleBandSync = () =>
+    runBand(async () => {
+      const result = await api.syncBandPhotos();
+      setBandMessage(`${result.message} — 추가 ${result.imported}장, 건너뜀 ${result.skipped}장`);
+    }, "동기화에 실패했습니다.");
+
+  React.useEffect(() => {
+    if (!authenticated || activeTab !== "band" || bandConfig) return;
+    api.getBandConfig()
+      .then((cfg) => {
+        setBandConfig(cfg);
+        if (cfg.bandKey) api.listBandAlbums(cfg.bandKey).then(setBandAlbumList).catch(() => undefined);
+      })
+      .catch(() => undefined);
+  }, [authenticated, activeTab, bandConfig]);
 
   const handleUnlock = async (student: StudentRecitationDto) => {
     if (unlockingStudentId !== null) return;
@@ -486,8 +558,8 @@ export default function AdminDashboardView({
   const totalStudents = students.length;
   const submittedStudents = submittedOnly.length;
   const visibleClasses = classIds.length;
-  const screenTitle = activeTab === "notice" ? "공지사항 관리" : activeTab === "schedule" ? "계획표 관리" : activeTab === "foundation" ? "머릿돌 관리" : activeTab === "lesson" ? "공과 영상 관리" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
-  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : activeTab === "schedule" ? "선생님 화면에 표시할 계획표 이미지 업로드 · 선택" : activeTab === "foundation" ? "선생님 화면에 표시할 PDF 업로드 · 선택" : activeTab === "lesson" ? "선생님이 다시 볼 수 있는 유튜브 공과 링크 관리" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
+  const screenTitle = activeTab === "notice" ? "공지사항 관리" : activeTab === "schedule" ? "계획표 관리" : activeTab === "foundation" ? "머릿돌 관리" : activeTab === "lesson" ? "공과 영상 관리" : activeTab === "band" ? "밴드 사진 연동" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
+  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : activeTab === "schedule" ? "선생님 화면에 표시할 계획표 이미지 업로드 · 선택" : activeTab === "foundation" ? "선생님 화면에 표시할 PDF 업로드 · 선택" : activeTab === "lesson" ? "선생님이 다시 볼 수 있는 유튜브 공과 링크 관리" : activeTab === "band" ? "네이버 밴드 앨범의 이번 주 사진을 주간 사진으로 가져오기" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-[max(env(safe-area-inset-bottom),2rem)]">
@@ -510,7 +582,7 @@ export default function AdminDashboardView({
               disabled={refreshing}
               className={cn(
                 "flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-300 ring-1 ring-slate-700 transition hover:text-white active:scale-95 disabled:opacity-60",
-                (activeTab === "notice" || activeTab === "schedule" || activeTab === "foundation" || activeTab === "lesson") && "hidden sm:flex"
+                (activeTab === "notice" || activeTab === "schedule" || activeTab === "foundation" || activeTab === "lesson" || activeTab === "band") && "hidden sm:flex"
               )}
               aria-label="현황 새로고침"
             >
@@ -539,7 +611,7 @@ export default function AdminDashboardView({
 
       {/* 화면 선택 */}
       <section className="px-5 pt-2">
-        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700 sm:grid-cols-6" aria-label="관리자 화면 선택">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700 sm:grid-cols-7" aria-label="관리자 화면 선택">
           <button
             type="button"
             aria-pressed={activeTab === "kindergarten"}
@@ -650,6 +722,24 @@ export default function AdminDashboardView({
             <PlayCircle className="h-4 w-4" />
             공과
           </button>
+          <button
+            type="button"
+            aria-pressed={activeTab === "band"}
+            onClick={() => {
+              setActiveTab("band");
+              setExpandedClass(null);
+              setExpandedStudent(null);
+            }}
+            className={cn(
+              "flex min-h-12 items-center justify-center gap-1 rounded-xl px-1 text-sm font-extrabold leading-tight transition active:scale-[0.98]",
+              activeTab === "band"
+                ? "bg-teal-500 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            <ImageIcon className="h-4 w-4" />
+            밴드
+          </button>
         </div>
       </section>
 
@@ -701,6 +791,22 @@ export default function AdminDashboardView({
           onDescriptionChange={setLessonVideoDescription}
           onAdd={handleAddLessonVideo}
           onDelete={handleDeleteLessonVideo}
+        />
+      ) : activeTab === "band" ? (
+        <BandManager
+          config={bandConfig}
+          accessToken={bandAccessToken}
+          bands={bandList}
+          albums={bandAlbumList}
+          busy={bandBusy}
+          message={bandMessage}
+          onAccessTokenChange={setBandAccessToken}
+          onSaveToken={handleBandSaveToken}
+          onLoadBands={handleBandLoadBands}
+          onSelectBand={handleBandSelectBand}
+          onSelectAlbum={handleBandSelectAlbum}
+          onToggleEnabled={handleBandToggleEnabled}
+          onSyncNow={handleBandSync}
         />
       ) : (
         <>
@@ -1022,6 +1128,136 @@ export default function AdminDashboardView({
         </div>
       )}
     </main>
+  );
+}
+
+function BandManager({
+  config,
+  accessToken,
+  bands,
+  albums,
+  busy,
+  message,
+  onAccessTokenChange,
+  onSaveToken,
+  onLoadBands,
+  onSelectBand,
+  onSelectAlbum,
+  onToggleEnabled,
+  onSyncNow,
+}: {
+  config: BandConfig | null;
+  accessToken: string;
+  bands: BandOption[];
+  albums: BandOption[];
+  busy: boolean;
+  message: string | null;
+  onAccessTokenChange: (value: string) => void;
+  onSaveToken: () => void;
+  onLoadBands: () => void;
+  onSelectBand: (bandKey: string) => void;
+  onSelectAlbum: (albumKey: string) => void;
+  onToggleEnabled: (enabled: boolean) => void;
+  onSyncNow: () => void;
+}) {
+  const connected = config?.connected ?? false;
+  const inputClass = "h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-teal-400 disabled:opacity-50";
+  return (
+    <section className="px-5 pt-4">
+      <section className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-white">네이버 밴드 연동</h2>
+            <p className="mt-0.5 text-xs font-bold leading-5 text-slate-500">
+              밴드 앨범의 이번 주 사진을 주간 사진으로 가져옵니다. (심사 통과 후 발급받은 액세스 토큰 필요)
+            </p>
+          </div>
+          <span className={cn(
+            "shrink-0 rounded-full px-3 py-1 text-xs font-extrabold ring-1",
+            connected ? "bg-teal-500/15 text-teal-300 ring-teal-500/30" : "bg-slate-900 text-slate-400 ring-slate-700"
+          )}>
+            {connected ? "연결됨" : "미연결"}
+          </span>
+        </div>
+
+        {/* 1. 액세스 토큰 */}
+        <label className="block">
+          <span className="text-xs font-extrabold text-slate-400">1. 액세스 토큰</span>
+          <div className="mt-1 grid grid-cols-[1fr_auto] gap-2">
+            <input
+              value={accessToken}
+              onChange={(event) => onAccessTokenChange(event.target.value)}
+              placeholder={connected ? "저장됨 (변경 시에만 입력)" : "밴드 개발자센터에서 발급한 토큰"}
+              aria-label="밴드 액세스 토큰"
+              className={inputClass}
+            />
+            <button type="button" onClick={onSaveToken} disabled={busy || !accessToken.trim()}
+              className="h-11 rounded-xl bg-teal-500 px-4 text-sm font-extrabold text-white transition hover:bg-teal-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
+              저장
+            </button>
+          </div>
+        </label>
+
+        {/* 2. 밴드 선택 */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-extrabold text-slate-400">2. 밴드 선택</span>
+            <button type="button" onClick={onLoadBands} disabled={busy || !connected}
+              className="rounded-lg bg-slate-700 px-2.5 py-1 text-xs font-bold text-slate-200 transition hover:bg-slate-600 active:scale-95 disabled:opacity-50">
+              목록 불러오기
+            </button>
+          </div>
+          <select
+            value={config?.bandKey ?? ""}
+            onChange={(event) => onSelectBand(event.target.value)}
+            disabled={busy || bands.length === 0}
+            aria-label="밴드 선택"
+            className={cn(inputClass, "mt-1")}
+          >
+            <option value="">{bands.length === 0 ? "먼저 목록을 불러오세요" : "밴드를 선택하세요"}</option>
+            {bands.map((b) => <option key={b.key} value={b.key}>{b.name}</option>)}
+          </select>
+        </div>
+
+        {/* 3. 앨범 선택 */}
+        <div className="mt-4">
+          <span className="text-xs font-extrabold text-slate-400">3. 앨범 선택</span>
+          <select
+            value={config?.photoAlbumKey ?? ""}
+            onChange={(event) => onSelectAlbum(event.target.value)}
+            disabled={busy || albums.length === 0}
+            aria-label="앨범 선택"
+            className={cn(inputClass, "mt-1")}
+          >
+            <option value="">{albums.length === 0 ? "밴드를 먼저 선택하세요" : "앨범을 선택하세요"}</option>
+            {albums.map((a) => <option key={a.key} value={a.key}>{a.name}</option>)}
+          </select>
+        </div>
+
+        {/* 4. 자동 동기화 토글 */}
+        <label className="mt-4 flex items-center justify-between rounded-xl bg-slate-900/60 px-3 py-2.5 ring-1 ring-slate-700/60">
+          <span className="text-sm font-bold text-slate-200">자동 동기화 사용</span>
+          <input
+            type="checkbox"
+            checked={config?.enabled ?? false}
+            onChange={(event) => onToggleEnabled(event.target.checked)}
+            disabled={busy}
+            className="h-5 w-5 accent-teal-500"
+          />
+        </label>
+
+        <button type="button" onClick={onSyncNow} disabled={busy || !config?.enabled}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-teal-500 px-4 text-sm font-extrabold text-white shadow transition hover:bg-teal-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
+          <RefreshCw className={cn("h-4 w-4", busy && "animate-spin")} />
+          {busy ? "처리 중…" : "지금 동기화"}
+        </button>
+
+        {message && <p className="mt-3 rounded-xl bg-slate-900/70 px-3 py-2 text-xs font-bold leading-5 text-slate-300 ring-1 ring-slate-700/60">{message}</p>}
+        {config?.lastSyncedAt && (
+          <p className="mt-2 text-[11px] font-bold text-slate-500">마지막 동기화: {new Date(config.lastSyncedAt).toLocaleString("ko-KR")}</p>
+        )}
+      </section>
+    </section>
   );
 }
 

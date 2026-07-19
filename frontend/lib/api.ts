@@ -47,6 +47,11 @@ export function resolveMediaUrl(url?: string | null) {
 
 export type ClassDto = { classId: number; className: string };
 
+// 네이버 밴드 연동
+export type BandConfig = { connected: boolean; enabled: boolean; bandKey: string | null; photoAlbumKey: string | null; lastSyncedAt: string | null };
+export type BandOption = { key: string; name: string };
+export type BandSyncResult = { imported: number; skipped: number; message: string };
+
 export type StudentRecitationDto = {
   studentId: number;
   name: string;
@@ -215,6 +220,13 @@ export const api = {
   addFoundationMaterial: (title: string, file: File, ageGroup = "AGE_3_4") => uploadContent<FoundationMaterial>("/api/admin/content/foundation-materials", title, file, { ageGroup }).then(withStringId),
   activateFoundationMaterial: (id: string) => request<FoundationMaterial>(`/api/admin/content/foundation-materials/${id}/active`, { method: "PUT" }).then(withStringId),
   deleteFoundationMaterial: (id: string) => request<void>(`/api/admin/content/foundation-materials/${id}`, { method: "DELETE" }),
+
+  getBandConfig: () => request<BandConfig>("/api/admin/band/config"),
+  saveBandConfig: (body: { accessToken?: string; bandKey?: string; photoAlbumKey?: string; enabled?: boolean }) =>
+    request<BandConfig>("/api/admin/band/config", { method: "PUT", body: JSON.stringify(body) }),
+  listBandBands: () => request<BandOption[]>("/api/admin/band/bands"),
+  listBandAlbums: (bandKey: string) => request<BandOption[]>(`/api/admin/band/albums?bandKey=${encodeURIComponent(bandKey)}`),
+  syncBandPhotos: () => request<BandSyncResult>("/api/admin/band/sync", { method: "POST" }),
 
   listNotices: () => request<AdminNotice[]>("/api/content/notices").then(listWithStringIds),
   listAdminNotices: () => request<AdminNotice[]>("/api/admin/content/notices").then(listWithStringIds),
