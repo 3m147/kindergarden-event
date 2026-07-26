@@ -115,8 +115,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
     cache: "no-store",
   });
-  // 로그인 실패도 401을 주므로 인증 요청 자체는 제외한다 (비밀번호 오류는 화면에서 안내).
-  if (res.status === 401 && !path.startsWith("/api/auth/")) {
+  // 로그인 실패(/api/auth/)와 공개 조회(/api/public/)는 401이어도 세션 로그아웃 대상에서 제외한다.
+  // (공개 엔드포인트가 아직 배포 전이라 401을 주면, 리다이렉트가 무한 새로고침 루프를 일으킨다.)
+  if (res.status === 401 && !path.startsWith("/api/auth/") && !path.startsWith("/api/public/")) {
     handleUnauthorized();
     throw new Error("세션이 만료되었습니다. 다시 로그인해 주세요.");
   }
