@@ -19,6 +19,8 @@ public class SharedContentController {
     @GetMapping("/api/content/foundation-materials") public List<FoundationMaterialDto> foundations() { return service.foundationMaterials(); }
     @GetMapping("/api/content/notices") public List<NoticeDto> notices() { return service.notices(false); }
     @GetMapping("/api/content/lesson-videos") public List<LessonVideoDto> lessons() { return service.lessonVideos(); }
+    // 로그인 화면(비로그인)에서 쓰므로 공개 경로. SecurityConfig 에서 /api/public/** 는 permitAll.
+    @GetMapping("/api/public/login-slides") public List<LoginSlideDto> loginSlides() { return service.loginSlides(); }
     @GetMapping("/api/admin/content/notices") public List<NoticeDto> adminNotices() { return service.notices(true); }
 
     @PostMapping("/api/admin/content/weekly-photos")
@@ -41,4 +43,9 @@ public class SharedContentController {
     @PostMapping("/api/admin/content/notices") public NoticeDto addNotice(@RequestBody CreateNoticeRequest request) { return service.createNotice(request); }
     @DeleteMapping("/api/admin/content/notices/{id}") public void deleteNotice(@PathVariable Long id) { service.deleteNotice(id); }
     @PutMapping("/api/admin/content/lesson-videos") public List<LessonVideoDto> replaceLessons(@RequestBody List<LessonVideoDto> videos) { return service.replaceLessonVideos(videos); }
+    @PostMapping("/api/admin/content/login-slides")
+    public LoginSlideDto addLoginSlide(@RequestParam MultipartFile file, @org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
+        return service.createLoginSlide(file, jwt.getClaim("userId"), "ADMIN");
+    }
+    @DeleteMapping("/api/admin/content/login-slides/{id}") public void deleteLoginSlide(@PathVariable Long id) { service.deleteLoginSlide(id); }
 }

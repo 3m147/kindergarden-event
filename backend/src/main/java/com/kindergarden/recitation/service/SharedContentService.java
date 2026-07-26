@@ -27,6 +27,7 @@ public class SharedContentService {
     private final FoundationMaterialRepository foundationMaterialRepository;
     private final NoticeRepository noticeRepository;
     private final LessonVideoRepository lessonVideoRepository;
+    private final LoginSlideRepository loginSlideRepository;
 
     private static final String DEFAULT_FOUNDATION_AGE_GROUP = "AGE_3_4";
 
@@ -56,6 +57,31 @@ public class SharedContentService {
             cleanup(file);
             throw e;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<LoginSlideDto> loginSlides() {
+        return loginSlideRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(v -> new LoginSlideDto(v.getId(), readUrl(v.getFile().getObjectKey()), v.getCreatedAt()))
+                .toList();
+    }
+
+    @Transactional
+    public LoginSlideDto createLoginSlide(MultipartFile multipart, Long creatorId, String creatorType) {
+        StoredFile file = store(StoredFileCategory.LOGIN_SLIDE, multipart, creatorId, creatorType);
+        try {
+            LoginSlide saved = loginSlideRepository.save(LoginSlide.builder().file(file).build());
+            return new LoginSlideDto(saved.getId(), readUrl(file.getObjectKey()), saved.getCreatedAt());
+        } catch (RuntimeException e) {
+            cleanup(file);
+            throw e;
+        }
+    }
+
+    @Transactional
+    public void deleteLoginSlide(Long id) {
+        LoginSlide v = loginSlideRepository.findById(id).orElseThrow();
+        deleteFileBacked(() -> loginSlideRepository.delete(v), loginSlideRepository::flush, v.getFile());
     }
 
     // 네이버 밴드에서 내려받은 사진 바이트를 주간 사진으로 저장한다 (기존 업로드 경로 재사용).

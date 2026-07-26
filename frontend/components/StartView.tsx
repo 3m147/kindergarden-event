@@ -20,6 +20,7 @@ import { type WeeklyPhoto } from "@/lib/weeklyPhotos";
 import { getActiveScheduleImage, type ScheduleImage } from "@/lib/scheduleImages";
 import { getActiveLessonVideo, type LessonVideo } from "@/lib/lessonVideos";
 import FoundationView from "@/components/FoundationView";
+import LoginSlideshow from "@/components/LoginSlideshow";
 
 const ASSISTANT_TEACHER_VIDEO_ID = "";
 const TEACHER_NOTICE_HIDE_DATE_KEY = "teacher_notice_hide_date";
@@ -182,6 +183,7 @@ export default function StartView() {
   const [teacherDarkMode, setTeacherDarkMode] = React.useState(false);
   // 로그인 성공 시 잠시 환영 메시지를 보여주기 위한 상태
   const [loggedIn, setLoggedIn] = React.useState<TeacherAccount | null>(null);
+  const [loginSlides, setLoginSlides] = React.useState<string[]>([]);
   const [teacherNotices, setTeacherNotices] = React.useState<AdminNotice[]>([]);
   const [weeklyPhotos, setWeeklyPhotos] = React.useState<WeeklyPhoto[]>([]);
   const [activeScheduleImage, setActiveScheduleImage] = React.useState<ScheduleImage | null>(null);
@@ -199,6 +201,20 @@ export default function StartView() {
   const isHomeTab = activeBottomTab === "home";
   const unreadNoticeCount = teacherNotices.filter((notice) => !readNoticeIds.includes(notice.id)).length;
   const activeLessonVideo = getActiveLessonVideo(lessonVideos);
+
+  // 로그인 배경 슬라이드쇼 사진을 서버(공개 API)에서 받아 랜덤 순서로 섞는다.
+  React.useEffect(() => {
+    api.listLoginSlides()
+      .then((slides) => {
+        const urls = slides.map((slide) => resolveMediaUrl(slide.imageUrl)).filter(Boolean);
+        for (let i = urls.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [urls[i], urls[j]] = [urls[j], urls[i]];
+        }
+        setLoginSlides(urls);
+      })
+      .catch(() => setLoginSlides([]));
+  }, []);
 
   React.useEffect(() => {
     const savedTeacher = localStorage.getItem("teacher_info");
@@ -505,7 +521,7 @@ export default function StartView() {
     const showAssistantVideo = loggedIn.role === "부교사" && ASSISTANT_TEACHER_VIDEO_ID.length > 0;
 
     return (
-      <main className={cn("mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center bg-slate-100 px-4 pb-[calc(max(env(safe-area-inset-bottom),1.5rem)+5.75rem)] text-slate-900 transition-colors sm:px-5 dark:bg-[#0b1120] dark:text-slate-100", teacherDarkMode && "dark")}>
+      <main className={cn("mx-auto flex min-h-[100dvh] w-full max-w-md md:max-w-3xl lg:max-w-5xl flex-col items-center bg-slate-100 px-4 pb-[calc(max(env(safe-area-inset-bottom),1.5rem)+5.75rem)] text-slate-900 transition-colors sm:px-5 dark:bg-[#0b1120] dark:text-slate-100", teacherDarkMode && "dark")}>
         {isHomeTab && noticePopupOpen && teacherNotices.length > 0 && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-5 backdrop-blur-sm">
             <section
@@ -642,16 +658,18 @@ export default function StartView() {
           )}
           <div className="mt-3 grid w-full gap-3">
             {activeBottomTab === "home" && (
-              <>
-                <TeacherHomeOverview
-                  noticeCount={teacherNotices.length}
-                  lessonCount={lessonVideos.length}
-                  activeLessonTitle={activeLessonVideo?.title}
-                  onKindergarten={() => openTeacherMode("kindergarten")}
-                  onSchedule={() => setActiveBottomTab("schedule")}
-                  onFoundation={() => setActiveBottomTab("foundation")}
-                  onLessons={() => setActiveBottomTab("lessons")}
-                />
+              <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+                <div className="lg:col-span-2">
+                  <TeacherHomeOverview
+                    noticeCount={teacherNotices.length}
+                    lessonCount={lessonVideos.length}
+                    activeLessonTitle={activeLessonVideo?.title}
+                    onKindergarten={() => openTeacherMode("kindergarten")}
+                    onSchedule={() => setActiveBottomTab("schedule")}
+                    onFoundation={() => setActiveBottomTab("foundation")}
+                    onLessons={() => setActiveBottomTab("lessons")}
+                  />
+                </div>
                 {weeklyPhotos.length > 0 && (
                   <WeeklyPhotoSlider
                     photos={weeklyPhotos}
@@ -668,7 +686,7 @@ export default function StartView() {
                 {showAssistantVideo && (
                   <YoutubeCard videoId={ASSISTANT_TEACHER_VIDEO_ID} title="손유희 영상" />
                 )}
-              </>
+              </div>
             )}
             {activeBottomTab === "info" && (editingInfo ? (
               <div className="grid w-full gap-3">
@@ -847,18 +865,20 @@ export default function StartView() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-pastel-cream">
+    <main className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-slate-900">
+      <LoginSlideshow slides={loginSlides} />
+      <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col">
       <header className="px-5 pb-4 pt-[max(env(safe-area-inset-top),2.5rem)] text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 shadow-soft">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 shadow-soft ring-1 ring-white/20 backdrop-blur">
           <ShieldCheck className="h-7 w-7 text-white" />
         </div>
-        <p className="mt-3 text-xs font-bold tracking-[0.14em] text-slate-500 sm:text-sm">
+        <p className="mt-3 text-xs font-bold tracking-[0.14em] text-white/70 drop-shadow sm:text-sm">
           {todayLabel()}
         </p>
-        <h1 className="mt-2 text-[1.75rem] font-extrabold leading-tight text-slate-900 sm:text-[2rem]">
+        <h1 className="mt-2 text-[1.75rem] font-extrabold leading-tight text-white drop-shadow-lg sm:text-[2rem]">
           교사 운영 도구
         </h1>
-        <p className="mt-2 text-sm font-bold text-slate-500">동탄교회 유치부</p>
+        <p className="mt-2 text-sm font-bold text-white/70 drop-shadow">동탄교회 유치부</p>
       </header>
 
       {/* 로그인 폼 */}
@@ -970,7 +990,7 @@ export default function StartView() {
         <button
           type="button"
           onClick={() => router.push("/admin")}
-          className="mx-auto flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-bold text-slate-500 transition hover:bg-white hover:text-slate-700 active:scale-[0.98]"
+          className="mx-auto flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-bold text-white/70 drop-shadow transition hover:bg-white/10 hover:text-white active:scale-[0.98]"
         >
           <LockKeyhole className="h-4 w-4" />
           관리자 로그인
@@ -979,6 +999,7 @@ export default function StartView() {
 
       {/* 하단 여백 */}
       <div className="pb-[max(env(safe-area-inset-bottom),1rem)]" />
+      </div>
     </main>
   );
 }
@@ -2028,7 +2049,7 @@ function BottomNavigation({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md border-t border-slate-200 bg-white/90 px-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-[#0b1120]/92"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md md:max-w-3xl lg:max-w-5xl border-t border-slate-200 bg-white/90 px-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-[#0b1120]/92"
       aria-label="하단 메뉴"
     >
       <div className="grid grid-cols-5 gap-0.5">

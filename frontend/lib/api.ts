@@ -52,6 +52,9 @@ export type BandConfig = { connected: boolean; enabled: boolean; bandKey: string
 export type BandOption = { key: string; name: string };
 export type BandSyncResult = { imported: number; skipped: number; message: string };
 
+// 로그인 배경 슬라이드쇼 사진
+export type LoginSlide = { id: string; imageUrl: string; createdAt?: string };
+
 export type StudentRecitationDto = {
   studentId: number;
   name: string;
@@ -210,6 +213,10 @@ export const api = {
   listWeeklyPhotos: () => request<WeeklyPhoto[]>("/api/content/weekly-photos").then(listWithStringIds),
   addWeeklyPhoto: (title: string, file: File) => uploadContent<WeeklyPhoto>("/api/admin/content/weekly-photos", title, file).then(withStringId),
   deleteWeeklyPhoto: (id: string) => request<void>(`/api/admin/content/weekly-photos/${id}`, { method: "DELETE" }),
+
+  listLoginSlides: () => request<LoginSlide[]>("/api/public/login-slides").then(listWithStringIds),
+  addLoginSlide: (file: File) => uploadContent<LoginSlide>("/api/admin/content/login-slides", "", file).then(withStringId),
+  deleteLoginSlide: (id: string) => request<void>(`/api/admin/content/login-slides/${id}`, { method: "DELETE" }),
 
   listScheduleImages: () => request<ScheduleImage[]>("/api/content/schedule-images").then(listWithStringIds),
   addScheduleImage: (title: string, file: File) => uploadContent<ScheduleImage>("/api/admin/content/schedule-images", title, file).then(withStringId),

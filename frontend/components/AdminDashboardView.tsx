@@ -11,7 +11,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Shield, LogOut, ChevronDown, ChevronUp, Users, BookOpen, HelpCircle, CheckCircle2, Camera, RefreshCw, Megaphone, Plus, Trash2, Image as ImageIcon, Upload, FileText, ExternalLink, CalendarDays, PlayCircle, Save } from "lucide-react";
-import { api, clearAuthToken, hasAuthToken, resolveMediaUrl, type BandConfig, type BandOption, type StudentRecitationDto } from "@/lib/api";
+import { api, clearAuthToken, hasAuthToken, resolveMediaUrl, type BandConfig, type BandOption, type LoginSlide, type StudentRecitationDto } from "@/lib/api";
 import { type AdminNotice } from "@/lib/notices";
 import { type WeeklyPhoto } from "@/lib/weeklyPhotos";
 import { getFoundationAgeGroupLabel, type FoundationAgeGroup, type FoundationMaterial } from "@/lib/foundationMaterials";
@@ -116,8 +116,16 @@ export default function AdminDashboardView({
   const router = useRouter();
   const [authenticated, setAuthenticated] = React.useState(false);
   const [mode, setMode] = React.useState<"festival" | "kindergarten">(initialMode);
-  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice" | "schedule" | "foundation" | "lesson" | "band">(initialMode);
-  const [expandedClass, setExpandedClass] = React.useState<number | null>(null);
+  const [activeTab, setActiveTab] = React.useState<"kindergarten" | "festival" | "notice" | "schedule" | "foundation" | "lesson" | "band" | "login">(initialMode);
+  // 여러 반을 동시에 펼칠 수 있도록 Set 으로 관리한다 (PC/태블릿에서 모든 반 펼쳐 보기).
+  const [expandedClasses, setExpandedClasses] = React.useState<Set<number>>(new Set());
+  const toggleClass = (classId: number) =>
+    setExpandedClasses((prev) => {
+      const next = new Set(prev);
+      if (next.has(classId)) next.delete(classId);
+      else next.add(classId);
+      return next;
+    });
   const [expandedStudent, setExpandedStudent] = React.useState<number | null>(null);
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -134,6 +142,8 @@ export default function AdminDashboardView({
   const [foundationAgeGroup, setFoundationAgeGroup] = React.useState<FoundationAgeGroup>("AGE_3_4");
   const [scheduleImages, setScheduleImages] = React.useState<ScheduleImage[]>([]);
   const [scheduleTitle, setScheduleTitle] = React.useState("");
+  const [loginSlides, setLoginSlides] = React.useState<LoginSlide[]>([]);
+  const [loginSlideBusy, setLoginSlideBusy] = React.useState(false);
   const [lessonVideos, setLessonVideos] = React.useState<LessonVideo[]>([]);
   const [lessonVideoTitle, setLessonVideoTitle] = React.useState("");
   const [lessonVideoUrl, setLessonVideoUrl] = React.useState("");
@@ -225,12 +235,14 @@ export default function AdminDashboardView({
       api.listFoundationMaterials(),
       api.listScheduleImages(),
       api.listLessonVideos(),
-    ]).then(([nextNotices, nextPhotos, nextMaterials, nextSchedules, nextVideos]) => {
+      api.listLoginSlides(),
+    ]).then(([nextNotices, nextPhotos, nextMaterials, nextSchedules, nextVideos, nextLoginSlides]) => {
       setNotices(nextNotices);
       setWeeklyPhotos(nextPhotos);
       setFoundationMaterials(nextMaterials);
       setScheduleImages(nextSchedules);
       setLessonVideos(nextVideos);
+      setLoginSlides(nextLoginSlides);
     }).catch((error) => {
       console.error("관리 콘텐츠 로드 실패", error);
       setToast({ kind: "error", text: "관리 콘텐츠를 불러오지 못했습니다." });
@@ -496,6 +508,36 @@ export default function AdminDashboardView({
     }
   };
 
+  const handleAddLoginSlides = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+    event.target.value = "";
+    if (files.length === 0) return;
+    setLoginSlideBusy(true);
+    try {
+      for (const file of files) {
+        await api.addLoginSlide(file);
+      }
+      setLoginSlides(await api.listLoginSlides());
+      setToast({ kind: "success", text: `로그인 배경 사진 ${files.length}장을 추가했습니다.` });
+    } catch (error) {
+      console.error("로그인 사진 저장 실패", error);
+      setToast({ kind: "error", text: "로그인 사진을 저장하지 못했습니다. 파일 크기와 형식을 확인해 주세요." });
+    } finally {
+      setLoginSlideBusy(false);
+    }
+  };
+
+  const handleDeleteLoginSlide = async (slideId: string) => {
+    try {
+      await api.deleteLoginSlide(slideId);
+      setLoginSlides(await api.listLoginSlides());
+      setToast({ kind: "success", text: "로그인 사진을 삭제했습니다." });
+    } catch (error) {
+      console.error("로그인 사진 삭제 실패", error);
+      setToast({ kind: "error", text: "로그인 사진을 삭제하지 못했습니다." });
+    }
+  };
+
   const handleAddLessonVideo = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const title = lessonVideoTitle.trim();
@@ -558,11 +600,11 @@ export default function AdminDashboardView({
   const totalStudents = students.length;
   const submittedStudents = submittedOnly.length;
   const visibleClasses = classIds.length;
-  const screenTitle = activeTab === "notice" ? "공지사항 관리" : activeTab === "schedule" ? "계획표 관리" : activeTab === "foundation" ? "머릿돌 관리" : activeTab === "lesson" ? "공과 영상 관리" : activeTab === "band" ? "밴드 사진 연동" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
-  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : activeTab === "schedule" ? "선생님 화면에 표시할 계획표 이미지 업로드 · 선택" : activeTab === "foundation" ? "선생님 화면에 표시할 PDF 업로드 · 선택" : activeTab === "lesson" ? "선생님이 다시 볼 수 있는 유튜브 공과 링크 관리" : activeTab === "band" ? "네이버 밴드 앨범의 이번 주 사진을 주간 사진으로 가져오기" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
+  const screenTitle = activeTab === "notice" ? "공지사항 관리" : activeTab === "schedule" ? "계획표 관리" : activeTab === "foundation" ? "머릿돌 관리" : activeTab === "lesson" ? "공과 영상 관리" : activeTab === "band" ? "밴드 사진 연동" : activeTab === "login" ? "로그인 배경 사진" : mode === "festival" ? "암송잔치 현황" : "유치부 체크 현황";
+  const screenSubtitle = activeTab === "notice" ? "관리자 공지 글 추가 · 삭제" : activeTab === "schedule" ? "선생님 화면에 표시할 계획표 이미지 업로드 · 선택" : activeTab === "foundation" ? "선생님 화면에 표시할 PDF 업로드 · 선택" : activeTab === "lesson" ? "선생님이 다시 볼 수 있는 유튜브 공과 링크 관리" : activeTab === "band" ? "네이버 밴드 앨범의 이번 주 사진을 주간 사진으로 가져오기" : activeTab === "login" ? "교사 로그인 화면 배경 슬라이드쇼 사진 (랜덤 순서로 표시)" : mode === "festival" ? "최종 제출된 암송 · 퀴즈 결과" : "출석 · 머릿돌 · 암송 활동 결과";
 
   return (
-    <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-[max(env(safe-area-inset-bottom),2rem)]">
+    <main className="mx-auto min-h-[100dvh] w-full max-w-2xl bg-slate-900 pb-[max(env(safe-area-inset-bottom),2rem)] md:max-w-5xl lg:max-w-7xl">
       {/* 헤더 */}
       <header className="sticky top-0 z-20 bg-slate-900/95 px-5 pb-4 pt-[max(env(safe-area-inset-top),1.25rem)] backdrop-blur">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -582,7 +624,7 @@ export default function AdminDashboardView({
               disabled={refreshing}
               className={cn(
                 "flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 text-sm font-bold text-slate-300 ring-1 ring-slate-700 transition hover:text-white active:scale-95 disabled:opacity-60",
-                (activeTab === "notice" || activeTab === "schedule" || activeTab === "foundation" || activeTab === "lesson" || activeTab === "band") && "hidden sm:flex"
+                (activeTab === "notice" || activeTab === "schedule" || activeTab === "foundation" || activeTab === "lesson" || activeTab === "band" || activeTab === "login") && "hidden sm:flex"
               )}
               aria-label="현황 새로고침"
             >
@@ -611,14 +653,14 @@ export default function AdminDashboardView({
 
       {/* 화면 선택 */}
       <section className="px-5 pt-2">
-        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700 sm:grid-cols-7" aria-label="관리자 화면 선택">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-800 p-1 ring-1 ring-slate-700 sm:grid-cols-8" aria-label="관리자 화면 선택">
           <button
             type="button"
             aria-pressed={activeTab === "kindergarten"}
             onClick={() => {
               setMode("kindergarten");
               setActiveTab("kindergarten");
-              setExpandedClass(null);
+              setExpandedClasses(new Set());
               setExpandedStudent(null);
               router.push("/admin/dashboard/kindergarten");
             }}
@@ -637,7 +679,7 @@ export default function AdminDashboardView({
             onClick={() => {
               setMode("festival");
               setActiveTab("festival");
-              setExpandedClass(null);
+              setExpandedClasses(new Set());
               setExpandedStudent(null);
               router.push("/admin/dashboard/festival");
             }}
@@ -655,7 +697,7 @@ export default function AdminDashboardView({
             aria-pressed={activeTab === "notice"}
             onClick={() => {
               setActiveTab("notice");
-              setExpandedClass(null);
+              setExpandedClasses(new Set());
               setExpandedStudent(null);
             }}
             className={cn(
@@ -673,7 +715,7 @@ export default function AdminDashboardView({
             aria-pressed={activeTab === "foundation"}
             onClick={() => {
               setActiveTab("foundation");
-              setExpandedClass(null);
+              setExpandedClasses(new Set());
               setExpandedStudent(null);
             }}
             className={cn(
@@ -691,7 +733,7 @@ export default function AdminDashboardView({
             aria-pressed={activeTab === "schedule"}
             onClick={() => {
               setActiveTab("schedule");
-              setExpandedClass(null);
+              setExpandedClasses(new Set());
               setExpandedStudent(null);
             }}
             className={cn(
@@ -709,7 +751,7 @@ export default function AdminDashboardView({
             aria-pressed={activeTab === "lesson"}
             onClick={() => {
               setActiveTab("lesson");
-              setExpandedClass(null);
+              setExpandedClasses(new Set());
               setExpandedStudent(null);
             }}
             className={cn(
@@ -727,7 +769,7 @@ export default function AdminDashboardView({
             aria-pressed={activeTab === "band"}
             onClick={() => {
               setActiveTab("band");
-              setExpandedClass(null);
+              setExpandedClasses(new Set());
               setExpandedStudent(null);
             }}
             className={cn(
@@ -739,6 +781,24 @@ export default function AdminDashboardView({
           >
             <ImageIcon className="h-4 w-4" />
             밴드
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeTab === "login"}
+            onClick={() => {
+              setActiveTab("login");
+              setExpandedClasses(new Set());
+              setExpandedStudent(null);
+            }}
+            className={cn(
+              "flex min-h-12 items-center justify-center gap-1 rounded-xl px-1 text-sm font-extrabold leading-tight transition active:scale-[0.98]",
+              activeTab === "login"
+                ? "bg-fuchsia-500 text-white shadow"
+                : "text-slate-400 hover:text-white"
+            )}
+          >
+            <ImageIcon className="h-4 w-4" />
+            로그인
           </button>
         </div>
       </section>
@@ -808,6 +868,13 @@ export default function AdminDashboardView({
           onToggleEnabled={handleBandToggleEnabled}
           onSyncNow={handleBandSync}
         />
+      ) : activeTab === "login" ? (
+        <LoginSlideManager
+          slides={loginSlides}
+          busy={loginSlideBusy}
+          onAdd={handleAddLoginSlides}
+          onDelete={handleDeleteLoginSlide}
+        />
       ) : (
         <>
           {/* 통계 카드 */}
@@ -822,7 +889,7 @@ export default function AdminDashboardView({
         <h2 className="mb-3 text-base font-extrabold text-slate-300">
           {mode === "festival" ? "📋 암송잔치 반별 현황" : "🌱 유치부 반별 현황"}
         </h2>
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 md:items-start">
           {classIds.length === 0 && (
             <div className="rounded-2xl bg-slate-800 px-4 py-8 text-center text-sm font-bold text-slate-500 ring-1 ring-slate-700">
               {mode === "festival" ? "아직 최종 제출된 학생이 없습니다." : "아직 표시할 학생 정보가 없습니다."}
@@ -830,7 +897,7 @@ export default function AdminDashboardView({
           )}
           {classIds.map((classId) => {
             const group = classGroups[classId];
-            const isExpanded = expandedClass === classId;
+            const isExpanded = expandedClasses.has(classId);
             const avgRecitation = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.lessonStates), 0) / group.students.length * 10) / 10;
             const avgQuiz = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.quizStates), 0) / group.students.length * 10) / 10;
             const avgActivity = (type: string) =>
@@ -844,7 +911,7 @@ export default function AdminDashboardView({
                 {/* 반 헤더 */}
                 <button
                   type="button"
-                  onClick={() => setExpandedClass(isExpanded ? null : classId)}
+                  onClick={() => toggleClass(classId)}
                   className="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-slate-700/50 active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3">
@@ -1131,6 +1198,73 @@ export default function AdminDashboardView({
   );
 }
 
+function LoginSlideManager({
+  slides,
+  busy,
+  onAdd,
+  onDelete,
+}: {
+  slides: LoginSlide[];
+  busy: boolean;
+  onAdd: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onDelete: (slideId: string) => void;
+}) {
+  return (
+    <section className="mx-auto w-full max-w-4xl px-5 pt-4">
+      <section className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-white">로그인 배경 사진</h2>
+            <p className="mt-0.5 text-xs font-bold leading-5 text-slate-500">
+              교사 로그인 화면 배경에서 2초마다 크로스페이드로 순환합니다. 순서는 매번 랜덤입니다. 여러 장을 한 번에 선택할 수 있습니다.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-slate-400 ring-1 ring-slate-700">
+            {slides.length}장
+          </span>
+        </div>
+
+        <label className={cn(
+          "flex h-12 cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-fuchsia-500 px-4 text-sm font-extrabold text-white shadow transition hover:bg-fuchsia-400 active:scale-95",
+          busy && "pointer-events-none opacity-60"
+        )}>
+          <Upload className="h-4 w-4" />
+          {busy ? "업로드 중…" : "사진 추가 (여러 장 가능)"}
+          <input type="file" accept="image/*" multiple onChange={onAdd} className="sr-only" aria-label="로그인 배경 사진 선택" disabled={busy} />
+        </label>
+      </section>
+
+      <div className="mt-5 flex items-center justify-between">
+        <h2 className="text-base font-extrabold text-slate-300">등록된 사진</h2>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {slides.length === 0 && (
+          <div className="col-span-full rounded-2xl bg-slate-800 px-4 py-10 text-center ring-1 ring-slate-700">
+            <ImageIcon className="mx-auto h-8 w-8 text-slate-600" />
+            <p className="mt-3 text-sm font-extrabold text-slate-400">등록된 로그인 사진이 없습니다.</p>
+          </div>
+        )}
+        {slides.map((slide) => (
+          <article key={slide.id} className="group relative overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-slate-700">
+            <div className="aspect-[4/3]">
+              <img src={resolveMediaUrl(slide.imageUrl)} alt="로그인 배경 사진" className="h-full w-full object-cover" draggable={false} />
+            </div>
+            <button
+              type="button"
+              onClick={() => onDelete(slide.id)}
+              className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950/70 text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-red-500 active:scale-95"
+              aria-label="사진 삭제"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function BandManager({
   config,
   accessToken,
@@ -1163,7 +1297,7 @@ function BandManager({
   const connected = config?.connected ?? false;
   const inputClass = "h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-teal-400 disabled:opacity-50";
   return (
-    <section className="px-5 pt-4">
+    <section className="mx-auto w-full max-w-4xl px-5 pt-4">
       <section className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
@@ -1293,7 +1427,7 @@ function NoticeManager({
   onDelete: (noticeId: string) => void;
 }) {
   return (
-    <section className="px-5 pt-4">
+    <section className="mx-auto w-full max-w-4xl px-5 pt-4">
       <form onSubmit={onAdd} className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -1481,7 +1615,7 @@ function FoundationManager({
     materials.find((material) => (material.ageGroup ?? "AGE_3_4") === targetAgeGroup && material.isActive);
 
   return (
-    <section className="px-5 pt-4">
+    <section className="mx-auto w-full max-w-4xl px-5 pt-4">
       <section className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
@@ -1631,7 +1765,7 @@ function ScheduleManager({
   onDelete: (imageId: string) => void;
 }) {
   return (
-    <section className="px-5 pt-4">
+    <section className="mx-auto w-full max-w-4xl px-5 pt-4">
       <section className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
@@ -1752,7 +1886,7 @@ function LessonVideoManager({
   onDelete: (videoId: string) => void;
 }) {
   return (
-    <section className="px-5 pt-4">
+    <section className="mx-auto w-full max-w-4xl px-5 pt-4">
       <form onSubmit={onAdd} className="rounded-2xl bg-slate-800 p-4 ring-1 ring-slate-700">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>

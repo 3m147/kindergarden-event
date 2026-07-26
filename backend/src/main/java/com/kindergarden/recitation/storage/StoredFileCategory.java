@@ -6,6 +6,7 @@ public enum StoredFileCategory {
     PROFILE(Set.of("image/jpeg", "image/png", "image/webp"), 5L * 1024 * 1024),
     WEEKLY_PHOTO(Set.of("image/jpeg", "image/png", "image/webp"), 10L * 1024 * 1024),
     SCHEDULE_IMAGE(Set.of("image/jpeg", "image/png", "image/webp"), 10L * 1024 * 1024),
+    LOGIN_SLIDE(Set.of("image/jpeg", "image/png", "image/webp"), 10L * 1024 * 1024),
     FOUNDATION_PDF(Set.of("application/pdf"), 20L * 1024 * 1024);
 
     private final Set<String> contentTypes;

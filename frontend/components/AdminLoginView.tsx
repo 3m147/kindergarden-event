@@ -70,8 +70,8 @@ export default function AdminLoginView() {
   // 로그인 성공 화면
   if (loggedIn) {
     return (
-      <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center justify-center bg-slate-900 px-6">
-        <div className="flex animate-fade-in flex-col items-center gap-4">
+      <main className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-slate-900 px-6">
+        <div className="flex w-full max-w-md animate-fade-in flex-col items-center gap-4">
           <div className="flex h-28 w-28 items-center justify-center rounded-full border-[5px] border-amber-400 bg-slate-800 shadow-soft">
             <Shield className="h-14 w-14 text-amber-400" />
           </div>
@@ -99,8 +99,8 @@ export default function AdminLoginView() {
 
   if (alreadyAuthenticated) {
     return (
-      <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center justify-center bg-slate-900 px-6">
-        <div className="flex w-full animate-fade-in flex-col items-center gap-5">
+      <main className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-slate-900 px-6">
+        <div className="flex w-full max-w-md animate-fade-in flex-col items-center gap-5">
           <div className="flex h-28 w-28 items-center justify-center rounded-full border-[5px] border-amber-400 bg-slate-800 shadow-soft">
             <Shield className="h-14 w-14 text-amber-400" />
           </div>
@@ -133,7 +133,8 @@ export default function AdminLoginView() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-slate-900">
+    <main className="flex min-h-[100dvh] w-full flex-col items-center bg-slate-900">
+      <div className="relative flex w-full max-w-md flex-1 flex-col md:max-w-lg">
       {/* 상단 타이틀 */}
       <header className="px-6 pb-4 pt-[max(env(safe-area-inset-top),3rem)] text-center">
         {/* 뒤로 가기 */}
@@ -258,6 +259,7 @@ export default function AdminLoginView() {
 
       {/* 하단 여백 */}
       <div className="pb-[max(env(safe-area-inset-bottom),1rem)]" />
+      </div>
     </main>
   );
 }
