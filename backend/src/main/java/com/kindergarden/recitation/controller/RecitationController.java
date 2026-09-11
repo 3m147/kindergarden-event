@@ -4,6 +4,7 @@ import com.kindergarden.recitation.dto.ClassDto;
 import com.kindergarden.recitation.dto.CreateStudentRequest;
 import com.kindergarden.recitation.dto.StudentRecitationDto;
 import com.kindergarden.recitation.dto.ToggleRequest;
+import com.kindergarden.recitation.dto.UpdateTeacherProfileRequest;
 import com.kindergarden.recitation.dto.UpdateTeacherRoleRequest;
 import com.kindergarden.recitation.dto.UpdateStudentRequest;
 import com.kindergarden.recitation.dto.UpdateTeacherRequest;
@@ -60,6 +61,13 @@ public class RecitationController {
             @PathVariable Long teacherId,
             @RequestBody UpdateTeacherRoleRequest body) {
         return service.updateTeacherRole(teacherId, body.role());
+    }
+
+    @PutMapping("/admin/teachers/{teacherId}")
+    public PersonProfileDto updateTeacherProfile(
+            @PathVariable Long teacherId,
+            @RequestBody UpdateTeacherProfileRequest body) {
+        return service.updateTeacherProfile(teacherId, body.name(), body.role());
     }
 
     @PutMapping("/students/{studentId}")

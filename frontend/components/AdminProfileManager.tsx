@@ -11,11 +11,12 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { Shield, LogOut, ArrowLeft, Camera, Upload, X, ChevronDown, ChevronUp, Users, GraduationCap, Trash2 } from "lucide-react";
+import { Shield, LogOut, ArrowLeft, Camera, Upload, X, ChevronDown, ChevronUp, Users, GraduationCap, Trash2, Pencil, Save } from "lucide-react";
 import { api, clearAuthToken, hasAuthToken, resolveMediaUrl } from "@/lib/api";
 
 // --- 더미 데이터 (DB 연동 전) ---
 type TeacherRole = "정교사" | "부교사";
+type TeacherEditDraft = { name: string; role: TeacherRole };
 
 type Person = {
   id: number;
@@ -37,6 +38,10 @@ function getDefaultAvatar(name: string) {
   return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=ffecb3,fff4b8,cdefc4,cde7fb,fcd5e0`;
 }
 
+function normalizeTeacherRole(role?: string): TeacherRole {
+  return role === "부교사" ? "부교사" : "정교사";
+}
+
 export default function AdminProfileManager() {
   const router = useRouter();
   const [authenticated, setAuthenticated] = React.useState(false);
@@ -50,6 +55,8 @@ export default function AdminProfileManager() {
   const [photos, setPhotos] = React.useState<Record<string, string>>({});
   const [uploadingId, setUploadingId] = React.useState<string | null>(null);
   const [savingRoleId, setSavingRoleId] = React.useState<number | null>(null);
+  const [editingTeacherId, setEditingTeacherId] = React.useState<number | null>(null);
+  const [teacherDrafts, setTeacherDrafts] = React.useState<Record<number, TeacherEditDraft>>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // 인증 체크 및 프로필 데이터 불러오기
@@ -185,6 +192,59 @@ export default function AdminProfileManager() {
     }
   };
 
+  const startTeacherEdit = (person: Person) => {
+    if (person.type !== "teacher") return;
+    setEditingTeacherId(person.id);
+    setTeacherDrafts((prev) => ({
+      ...prev,
+      [person.id]: { name: person.name, role: normalizeTeacherRole(person.role) },
+    }));
+  };
+
+  const updateTeacherDraft = (teacherId: number, patch: Partial<TeacherEditDraft>) => {
+    setTeacherDrafts((prev) => ({
+      ...prev,
+      [teacherId]: {
+        name: prev[teacherId]?.name ?? "",
+        role: prev[teacherId]?.role ?? "정교사",
+        ...patch,
+      },
+    }));
+  };
+
+  const cancelTeacherEdit = (teacherId: number) => {
+    setEditingTeacherId(null);
+    setTeacherDrafts((prev) => {
+      const next = { ...prev };
+      delete next[teacherId];
+      return next;
+    });
+  };
+
+  const saveTeacherEdit = async (person: Person) => {
+    if (person.type !== "teacher") return;
+    const draft = teacherDrafts[person.id] ?? { name: person.name, role: normalizeTeacherRole(person.role) };
+    const name = draft.name.trim();
+    if (!name) {
+      alert("교사 이름을 입력해 주세요.");
+      return;
+    }
+
+    setSavingRoleId(person.id);
+    try {
+      const updated = await api.updateAdminTeacher(person.id, { name, role: draft.role });
+      setTeachers((prev) =>
+        prev.map((teacher) => teacher.id === person.id ? { ...teacher, name: updated.name, role: updated.role ?? draft.role } : teacher)
+      );
+      cancelTeacherEdit(person.id);
+    } catch (err) {
+      console.error("교사 정보 저장 실패:", err);
+      alert("교사 정보 저장 중 오류가 발생했습니다.");
+    } finally {
+      setSavingRoleId(null);
+    }
+  };
+
   if (!authenticated) return null;
 
   const people = tab === "teacher" ? teachers : students;
@@ -307,6 +367,11 @@ export default function AdminProfileManager() {
                         const key = getStorageKey(person.type, person.id);
                         const photoUrl = photos[key];
                         const hasPhoto = !!photoUrl;
+                        const isEditingTeacher = person.type === "teacher" && editingTeacherId === person.id;
+                        const teacherDraft = person.type === "teacher"
+                          ? teacherDrafts[person.id] ?? { name: person.name, role: normalizeTeacherRole(person.role) }
+                          : null;
+                        const isSavingTeacher = savingRoleId === person.id;
 
                         return (
                           <div
@@ -351,29 +416,71 @@ export default function AdminProfileManager() {
                               )}
                             </div>
 
-                            {person.type === "teacher" && (
-                              <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-slate-950/70 p-1 ring-1 ring-slate-700">
-                                {(["정교사", "부교사"] as const).map((role) => {
-                                  const selected = person.role === role;
-                                  const disabled = savingRoleId === person.id;
-                                  return (
+                            {person.type === "teacher" && teacherDraft && (
+                              isEditingTeacher ? (
+                                <div className="grid w-full gap-2">
+                                  <input
+                                    value={teacherDraft.name}
+                                    onChange={(e) => updateTeacherDraft(person.id, { name: e.target.value })}
+                                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 text-center text-xs font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+                                    placeholder="교사 이름"
+                                  />
+                                  <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-950/70 p-1 ring-1 ring-slate-700">
+                                    {(["정교사", "부교사"] as const).map((role) => {
+                                      const selected = teacherDraft.role === role;
+                                      return (
+                                        <button
+                                          key={role}
+                                          type="button"
+                                          onClick={() => updateTeacherDraft(person.id, { role })}
+                                          disabled={isSavingTeacher}
+                                          className={cn(
+                                            "h-8 rounded-lg text-[11px] font-extrabold transition active:scale-95 disabled:cursor-wait disabled:opacity-70",
+                                            selected
+                                              ? "bg-amber-400 text-slate-950 shadow-soft"
+                                              : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                          )}
+                                        >
+                                          {role}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-1">
                                     <button
-                                      key={role}
                                       type="button"
-                                      onClick={() => handleRoleChange(person, role)}
-                                      disabled={disabled}
-                                      className={cn(
-                                        "h-8 rounded-lg text-[11px] font-extrabold transition active:scale-95 disabled:cursor-wait disabled:opacity-70",
-                                        selected
-                                          ? "bg-amber-400 text-slate-950 shadow-soft"
-                                          : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                                      )}
+                                      onClick={() => saveTeacherEdit(person)}
+                                      disabled={isSavingTeacher}
+                                      className="flex h-8 items-center justify-center gap-1 rounded-lg bg-emerald-500 text-[11px] font-extrabold text-white transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
                                     >
-                                      {role}
+                                      {isSavingTeacher ? (
+                                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                                      ) : (
+                                        <Save className="h-3.5 w-3.5" />
+                                      )}
+                                      저장
                                     </button>
-                                  );
-                                })}
-                              </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => cancelTeacherEdit(person.id)}
+                                      disabled={isSavingTeacher}
+                                      className="flex h-8 items-center justify-center gap-1 rounded-lg bg-slate-800 text-[11px] font-extrabold text-slate-300 ring-1 ring-slate-700 transition active:scale-95 disabled:cursor-wait disabled:opacity-70"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                      취소
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => startTeacherEdit(person)}
+                                  className="flex h-8 w-full items-center justify-center gap-1 rounded-lg bg-amber-400/10 text-[11px] font-extrabold text-amber-300 ring-1 ring-amber-400/30 transition hover:bg-amber-400/20 active:scale-95"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  권한 수정
+                                </button>
+                              )
                             )}
 
                             {/* 삭제 버튼 (사진 있을 때만) */}

@@ -135,6 +135,15 @@ public class RecitationService {
     }
 
     @Transactional
+    public PersonProfileDto updateTeacherProfile(Long teacherId, String name, String role) {
+        Teacher teacher = teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new IllegalArgumentException("교사 없음: " + teacherId));
+        teacher.setName(requireName(name, "교사 이름"));
+        teacher.setRole(requireTeacherRole(role));
+        return toProfile(teacherRepository.save(teacher));
+    }
+
+    @Transactional
     public PersonProfileDto updateStudent(Long studentId, String name, LocalDate birthDate, String parentName) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));

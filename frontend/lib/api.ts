@@ -186,6 +186,12 @@ export const api = {
       { method: "PUT", body: JSON.stringify({ role }) }
     ),
 
+  updateAdminTeacher: (teacherId: number, body: { name: string; role: "정교사" | "부교사" }) =>
+    request<PersonProfileDto>(
+      `/api/admin/teachers/${teacherId}`,
+      { method: "PUT", body: JSON.stringify(body) }
+    ),
+
   updateStudent: (studentId: number, body: { name: string; birthDate?: string; parentName?: string }) =>
     request<PersonProfileDto>(
       `/api/students/${studentId}`,
