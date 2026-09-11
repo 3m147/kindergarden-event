@@ -127,6 +127,14 @@ public class RecitationService {
     }
 
     @Transactional
+    public PersonProfileDto updateTeacherRole(Long teacherId, String role) {
+        Teacher teacher = teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new IllegalArgumentException("교사 없음: " + teacherId));
+        teacher.setRole(requireTeacherRole(role));
+        return toProfile(teacherRepository.save(teacher));
+    }
+
+    @Transactional
     public PersonProfileDto updateStudent(Long studentId, String name, LocalDate birthDate, String parentName) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("학생 없음: " + studentId));
@@ -281,5 +289,13 @@ public class RecitationService {
         if (value == null) return null;
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String requireTeacherRole(String role) {
+        String normalized = normalizeOptional(role);
+        if (!"정교사".equals(normalized) && !"부교사".equals(normalized)) {
+            throw new IllegalArgumentException("교사 역할은 정교사 또는 부교사만 선택할 수 있습니다.");
+        }
+        return normalized;
     }
 }

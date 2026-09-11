@@ -15,13 +15,15 @@ import { Shield, LogOut, ArrowLeft, Camera, Upload, X, ChevronDown, ChevronUp, U
 import { api, clearAuthToken, hasAuthToken, resolveMediaUrl } from "@/lib/api";
 
 // --- 더미 데이터 (DB 연동 전) ---
+type TeacherRole = "정교사" | "부교사";
+
 type Person = {
   id: number;
   name: string;
   type: "teacher" | "student";
   className: string;
   classId: number;
-  role?: string; // 교사만
+  role?: TeacherRole | string; // 교사만
   birthDate?: string;
   parentName?: string;
 };
@@ -47,6 +49,7 @@ export default function AdminProfileManager() {
   
   const [photos, setPhotos] = React.useState<Record<string, string>>({});
   const [uploadingId, setUploadingId] = React.useState<string | null>(null);
+  const [savingRoleId, setSavingRoleId] = React.useState<number | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // 인증 체크 및 프로필 데이터 불러오기
@@ -155,6 +158,31 @@ export default function AdminProfileManager() {
       delete next[key];
       return next;
     });
+  };
+
+  const handleRoleChange = async (person: Person, role: TeacherRole) => {
+    if (person.type !== "teacher" || person.role === role || savingRoleId) return;
+
+    setSavingRoleId(person.id);
+    const previousRole = person.role;
+    setTeachers((prev) =>
+      prev.map((teacher) => teacher.id === person.id ? { ...teacher, role } : teacher)
+    );
+
+    try {
+      const updated = await api.updateTeacherRole(person.id, role);
+      setTeachers((prev) =>
+        prev.map((teacher) => teacher.id === person.id ? { ...teacher, role: updated.role ?? role } : teacher)
+      );
+    } catch (err) {
+      console.error("교사 역할 저장 실패:", err);
+      setTeachers((prev) =>
+        prev.map((teacher) => teacher.id === person.id ? { ...teacher, role: previousRole } : teacher)
+      );
+      alert("교사 역할 저장 중 오류가 발생했습니다.");
+    } finally {
+      setSavingRoleId(null);
+    }
   };
 
   if (!authenticated) return null;
@@ -322,6 +350,31 @@ export default function AdminProfileManager() {
                                 </div>
                               )}
                             </div>
+
+                            {person.type === "teacher" && (
+                              <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-slate-950/70 p-1 ring-1 ring-slate-700">
+                                {(["정교사", "부교사"] as const).map((role) => {
+                                  const selected = person.role === role;
+                                  const disabled = savingRoleId === person.id;
+                                  return (
+                                    <button
+                                      key={role}
+                                      type="button"
+                                      onClick={() => handleRoleChange(person, role)}
+                                      disabled={disabled}
+                                      className={cn(
+                                        "h-8 rounded-lg text-[11px] font-extrabold transition active:scale-95 disabled:cursor-wait disabled:opacity-70",
+                                        selected
+                                          ? "bg-amber-400 text-slate-950 shadow-soft"
+                                          : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                      )}
+                                    >
+                                      {role}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
 
                             {/* 삭제 버튼 (사진 있을 때만) */}
                             {hasPhoto && (

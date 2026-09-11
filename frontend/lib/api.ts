@@ -5,8 +5,8 @@ import type { AdminNotice } from "@/lib/notices";
 import { DEFAULT_LESSON_VIDEOS, type LessonVideo } from "@/lib/lessonVideos";
 
 // 프론트 ↔ Spring Boot REST 클라이언트.
-// 환경변수로 베이스 URL 분리 — 개발 중엔 localhost:8080, 배포 시엔 .env.production 에서 덮어쓴다.
-const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+// 브라우저에서는 항상 같은 origin의 /api를 호출하고, next.config의 rewrites가 Spring Boot로 프록시한다.
+// 백엔드 주소는 클라이언트에 노출하지 않는 API_BASE로 next.config.mjs에서만 사용한다.
 const AUTH_TOKEN_KEY = "kindergarden_auth_token";
 
 export function saveAuthToken(token?: string) {
@@ -41,7 +41,7 @@ export function resolveMediaUrl(url?: string | null) {
   if (!value) return "";
   if (/^(https?:|blob:|data:)/i.test(value)) return value;
   if (value.startsWith("//")) return `https:${value}`;
-  if (value.startsWith("/")) return `${BASE}${value}`;
+  if (value.startsWith("/")) return value;
   return `https://${value}`;
 }
 
@@ -110,7 +110,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ? { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) }
     : { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) };
 
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(path, {
     ...init,
     headers,
     cache: "no-store",
@@ -178,6 +178,12 @@ export const api = {
     request<PersonProfileDto>(
       `/api/teachers/${teacherId}`,
       { method: "PUT", body: JSON.stringify({ name }) }
+    ),
+
+  updateTeacherRole: (teacherId: number, role: "정교사" | "부교사") =>
+    request<PersonProfileDto>(
+      `/api/admin/teachers/${teacherId}/role`,
+      { method: "PUT", body: JSON.stringify({ role }) }
     ),
 
   updateStudent: (studentId: number, body: { name: string; birthDate?: string; parentName?: string }) =>

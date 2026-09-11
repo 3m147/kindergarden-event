@@ -8,6 +8,7 @@ import com.kindergarden.recitation.entity.WeeklyPhoto;
 import com.kindergarden.recitation.dto.LessonVideoDto;
 import com.kindergarden.recitation.repository.FoundationMaterialRepository;
 import com.kindergarden.recitation.repository.LessonVideoRepository;
+import com.kindergarden.recitation.repository.LoginSlideRepository;
 import com.kindergarden.recitation.repository.NoticeRepository;
 import com.kindergarden.recitation.repository.ScheduleImageRepository;
 import com.kindergarden.recitation.repository.StoredFileRepository;
@@ -45,6 +46,7 @@ class SharedContentServiceTest {
     @Mock FoundationMaterialRepository foundationMaterialRepository;
     @Mock NoticeRepository noticeRepository;
     @Mock LessonVideoRepository lessonVideoRepository;
+    @Mock LoginSlideRepository loginSlideRepository;
 
     private SharedContentService service;
 
@@ -57,7 +59,8 @@ class SharedContentServiceTest {
                 scheduleImageRepository,
                 foundationMaterialRepository,
                 noticeRepository,
-                lessonVideoRepository
+                lessonVideoRepository,
+                loginSlideRepository
         );
         ReflectionTestUtils.setField(service, "signedUrlMinutes", 15L);
         lenient().when(storage.createReadUri(any(), any(Duration.class))).thenReturn(URI.create("https://signed.example/file"));
