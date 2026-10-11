@@ -79,6 +79,7 @@ export type StudentRecitationDto = {
 export type AuthResponse = {
   success: boolean;
   id?: number;
+  loginId?: string;
   name?: string;
   role?: string;
   classId?: number;

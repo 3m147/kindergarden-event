@@ -23,6 +23,7 @@ import FoundationView from "@/components/FoundationView";
 import LoginSlideshow from "@/components/LoginSlideshow";
 
 const ASSISTANT_TEACHER_VIDEO_ID = "";
+const RECITATION_UNLOCK_LOGIN_IDS = ["kangteacher", "kim4-1"];
 const TEACHER_NOTICE_HIDE_DATE_KEY = "teacher_notice_hide_date";
 const TEACHER_NOTICE_READ_IDS_KEY = "teacher_notice_read_ids";
 const TEACHER_NOTICE_MUTED_KEY = "teacher_notice_muted";
@@ -156,6 +157,7 @@ function useViewportCenterBand<T extends HTMLElement>({
 // 로그인 성공 후 환영 화면에서 보여줄 교사 정보
 type TeacherAccount = {
   id: string;
+  loginId?: string;
   name: string;
   role: "정교사" | "부교사";
   classId: number;
@@ -340,6 +342,7 @@ export default function StartView() {
 
       const account: TeacherAccount = {
         id: response.id!.toString(),
+        loginId: response.loginId ?? userId.trim(),
         name: response.name!,
         role: response.role as "정교사" | "부교사",
         classId: response.classId!,
@@ -365,6 +368,7 @@ export default function StartView() {
 
   const openTeacherMode = (mode: "festival" | "kindergarten") => {
     if (!loggedIn) return;
+    if (mode === "festival" && !RECITATION_UNLOCK_LOGIN_IDS.includes(loggedIn.loginId ?? "")) return;
     router.push(`/check/${loggedIn.classId}?mode=${mode}`);
   };
 
@@ -519,6 +523,7 @@ export default function StartView() {
   // 로그인 성공 후 선생님이 사용할 화면 선택
   if (loggedIn) {
     const showAssistantVideo = loggedIn.role === "부교사" && ASSISTANT_TEACHER_VIDEO_ID.length > 0;
+    const recitationUnlocked = RECITATION_UNLOCK_LOGIN_IDS.includes(loggedIn.loginId ?? "");
 
     return (
       <main className={cn("mx-auto flex min-h-[100dvh] w-full max-w-md md:max-w-3xl lg:max-w-5xl flex-col items-center bg-slate-100 px-4 pb-[calc(max(env(safe-area-inset-bottom),1.5rem)+5.75rem)] text-slate-900 transition-colors sm:px-5 dark:bg-[#0b1120] dark:text-slate-100", teacherDarkMode && "dark")}>
@@ -614,6 +619,13 @@ export default function StartView() {
               />
             </div>
           </header>
+          {isHomeTab && (
+            <TeacherModeLauncher
+              festivalUnlocked={recitationUnlocked}
+              onKindergarten={() => openTeacherMode("kindergarten")}
+              onFestival={() => openTeacherMode("festival")}
+            />
+          )}
           {isHomeTab && noticeInboxOpen && (
             <NoticeInboxPanel
               notices={teacherNotices}
@@ -664,7 +676,6 @@ export default function StartView() {
                     noticeCount={teacherNotices.length}
                     lessonCount={lessonVideos.length}
                     activeLessonTitle={activeLessonVideo?.title}
-                    onKindergarten={() => openTeacherMode("kindergarten")}
                     onSchedule={() => setActiveBottomTab("schedule")}
                     onFoundation={() => setActiveBottomTab("foundation")}
                     onLessons={() => setActiveBottomTab("lessons")}
@@ -1004,11 +1015,56 @@ export default function StartView() {
   );
 }
 
+function TeacherModeLauncher({
+  festivalUnlocked,
+  onKindergarten,
+  onFestival,
+}: {
+  festivalUnlocked: boolean;
+  onKindergarten: () => void;
+  onFestival: () => void;
+}) {
+  return (
+    <section className="mt-3 grid grid-cols-2 gap-2" aria-label="교사 체크 메뉴">
+      <button
+        type="button"
+        onClick={onKindergarten}
+        className="flex min-h-[5.75rem] flex-col justify-between rounded-2xl bg-slate-900 p-4 text-left text-white shadow-sm transition active:scale-[0.98] dark:bg-white dark:text-slate-950"
+      >
+        <ClipboardCheck className="h-6 w-6" />
+        <span>
+          <span className="block break-keep text-base font-extrabold leading-5">유치부 체크</span>
+          <span className="mt-1 block break-keep text-xs font-bold opacity-75">출석 · 머릿돌 · 암송</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onFestival}
+        disabled={!festivalUnlocked}
+        aria-disabled={!festivalUnlocked}
+        className={cn(
+          "flex min-h-[5.75rem] flex-col justify-between rounded-2xl p-4 text-left shadow-sm ring-1 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100",
+          festivalUnlocked
+            ? "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25"
+            : "bg-slate-100 text-slate-400 ring-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:ring-slate-700"
+        )}
+      >
+        {festivalUnlocked ? <Check className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
+        <span>
+          <span className="block break-keep text-base font-extrabold leading-5">유치부 암송</span>
+          <span className="mt-1 block break-keep text-xs font-bold opacity-75">
+            {festivalUnlocked ? "암송잔치 체크" : "허용 계정 전용"}
+          </span>
+        </span>
+      </button>
+    </section>
+  );
+}
+
 function TeacherHomeOverview({
   noticeCount,
   lessonCount,
   activeLessonTitle,
-  onKindergarten,
   onSchedule,
   onFoundation,
   onLessons,
@@ -1016,7 +1072,6 @@ function TeacherHomeOverview({
   noticeCount: number;
   lessonCount: number;
   activeLessonTitle?: string;
-  onKindergarten: () => void;
   onSchedule: () => void;
   onFoundation: () => void;
   onLessons: () => void;
@@ -1028,18 +1083,12 @@ function TeacherHomeOverview({
   });
   const actions = [
     {
-      label: "유치부 체크",
-      caption: "출석 · 머릿돌 · 암송",
-      icon: ClipboardCheck,
-      onClick: onKindergarten,
-      tone: "bg-slate-900 text-white",
-    },
-    {
       label: "계획표",
       caption: "이번 주 일정",
       icon: CalendarDays,
       onClick: onSchedule,
       tone: "bg-blue-50 text-blue-700 ring-1 ring-blue-100",
+      disabled: false,
     },
     {
       label: "머릿돌",
@@ -1047,6 +1096,7 @@ function TeacherHomeOverview({
       icon: BookOpen,
       onClick: onFoundation,
       tone: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
+      disabled: false,
     },
     {
       label: "공과 자료실",
@@ -1054,6 +1104,7 @@ function TeacherHomeOverview({
       icon: PlayCircle,
       onClick: onLessons,
       tone: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
+      disabled: false,
     },
   ];
 
@@ -1082,8 +1133,10 @@ function TeacherHomeOverview({
               key={action.label}
               type="button"
               onClick={action.onClick}
+              disabled={action.disabled}
+              aria-disabled={action.disabled}
               className={cn(
-                "flex flex-col justify-between rounded-xl p-3 text-left transition-[min-height,transform] duration-700 active:scale-[0.98] motion-reduce:transition-none",
+                "flex flex-col justify-between rounded-xl p-3 text-left transition-[min-height,transform] duration-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 motion-reduce:transition-none",
                 overviewExpanded ? "min-h-[7.25rem]" : "min-h-[5.5rem]",
                 action.tone
               )}

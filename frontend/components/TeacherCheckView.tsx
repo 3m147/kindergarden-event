@@ -13,7 +13,7 @@
  *
  * 학생 선택 UX
  *  - 중앙 상단의 큰 원형 프로필은 "지금 누구를 보고 있는지"만 보여준다 — 탭 기능 없음.
- *  - 아래 프로필 그리드를 탭하면 해당 학생의 과(1~16) 선택 팝업이 뜬다.
+ *  - 아래 프로필 그리드를 탭하면 해당 학생의 대회 범위 과 선택 팝업이 뜬다.
  *  - 팝업에서 "완료" 를 누르면 선택한 과 목록과 함께 성공 표시되고,
  *    프로필에 초록색 원 + 체크 아이콘이 팝 애니메이션으로 나타난다.
  *  - "뒤로" 는 변경 사항 없이 팝업만 닫는다.
@@ -30,13 +30,20 @@ import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, CalendarDays, 
 import { cn } from "@/lib/cn";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
-const TOTAL_RECITATIONS = 16;
+const FESTIVAL_RECITATION_START = 17;
+const FESTIVAL_RECITATION_END = 42;
+const FESTIVAL_RECITATION_LESSONS = Array.from(
+  { length: FESTIVAL_RECITATION_END - FESTIVAL_RECITATION_START + 1 },
+  (_, i) => FESTIVAL_RECITATION_START + i
+);
+const TOTAL_RECITATIONS = FESTIVAL_RECITATION_LESSONS.length;
 const TOTAL_QUIZZES = 18;
 const TOTAL_KINDERGARTEN_LESSONS = 52;
 const TOTAL_KINDERGARTEN_ACTIVITIES = TOTAL_KINDERGARTEN_LESSONS * 3;
 const KINDERGARTEN_BASE_UNLOCK_LESSON = 19;
 const KINDERGARTEN_BASE_UNLOCK_DATE = new Date(2026, 4, 10);
 const TEACHER_DARK_MODE_KEY = "teacher_dark_mode";
+const RECITATION_UNLOCK_LOGIN_IDS = ["kangteacher", "kim4-1"];
 type ToggleState = "success" | "fail" | undefined;
 
 function nextToggleState(current: ToggleState): ToggleState {
@@ -85,11 +92,16 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
 
     if (info) {
-      setTeacherInfo(JSON.parse(info));
+      const parsedInfo = JSON.parse(info);
+      if (mode === "festival" && !RECITATION_UNLOCK_LOGIN_IDS.includes(parsedInfo?.loginId ?? "")) {
+        router.replace(`/check/${parsedInfo?.classId || initialClassId || 1}?mode=kindergarten`);
+        return;
+      }
+      setTeacherInfo(parsedInfo);
     } else {
       router.push("/");
     }
-  }, [router]);
+  }, [initialClassId, mode, router]);
 
   const selectedClassId = teacherInfo?.classId || initialClassId || 1;
   const className = teacherInfo?.className || "반 정보 없음";
@@ -120,7 +132,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
       const data = await api.getClassRecitations(selectedClassId);
       // 클라이언트에서 추가적인 success/quizSuccess 필드를 계산해준다
       const mapped = data.map(s => {
-        const lCount = Object.keys(s.lessonStates || {}).length;
+        const lCount = countFestivalChecked(s.lessonStates);
         const qCount = Object.keys(s.quizStates || {}).length;
         const kCount = Object.keys(s.kindergartenActivityStates || {}).length;
         return {
@@ -168,11 +180,11 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
   const submitConfirmStudent =
     students.find((s) => s.studentId === submitConfirmStudentId) ?? null;
 
-  // 모든 과(1~16)에 대해 success/fail 표시가 끝난 학생 수 — 진행률 표시용
-  const isAllChecked = (states: Record<number, "success" | "fail"> | undefined, total: number) =>
-    !!states && Object.keys(states).length === total;
-  const recitationDone = students.filter((s) => isAllChecked(s.lessonStates, TOTAL_RECITATIONS)).length;
-  const quizDone = students.filter((s) => isAllChecked(s.quizStates, TOTAL_QUIZZES)).length;
+  // 대회 범위 과에 대해 success/fail 표시가 끝난 학생 수 — 진행률 표시용
+  const isAllChecked = (states: Record<number, "success" | "fail"> | undefined, lessons: number[]) =>
+    !!states && lessons.every((lesson) => states[lesson] !== undefined);
+  const recitationDone = students.filter((s) => isAllChecked(s.lessonStates, FESTIVAL_RECITATION_LESSONS)).length;
+  const quizDone = students.filter((s) => isAllChecked(s.quizStates, Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1))).length;
   const kindergartenDone = students.filter((s) => Object.keys(s.kindergartenActivityStates ?? {}).length === TOTAL_KINDERGARTEN_ACTIVITIES).length;
   const totalCount = students.length;
 
@@ -291,9 +303,8 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
         if (nextState) newStates[lessonNum] = nextState;
         else delete newStates[lessonNum];
 
-        // 팝업창 안의 모든 버튼(1~16과)이 누락(흰색) 없이 모두 초록색 또는 빨간색으로 토글되면 완료 이벤트(success) 발동
-        const nextSuccess = Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1)
-          .every((n) => newStates[n] !== undefined);
+        // 팝업창 안의 모든 대회 범위 과가 누락 없이 토글되면 완료 이벤트(success) 발동
+        const nextSuccess = FESTIVAL_RECITATION_LESSONS.every((n) => newStates[n] !== undefined);
 
         return { ...s, lessonStates: newStates, success: nextSuccess };
       })
@@ -367,8 +378,8 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
       setStudents((prev) => prev.map((s) => (s.studentId === studentId ? {
         ...s,
         ...updated,
-        success: isAllChecked(updated.lessonStates, TOTAL_RECITATIONS),
-        quizSuccess: isAllChecked(updated.quizStates, TOTAL_QUIZZES)
+        success: isAllChecked(updated.lessonStates, FESTIVAL_RECITATION_LESSONS),
+        quizSuccess: isAllChecked(updated.quizStates, Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1))
       } : s)));
       setToast({ kind: "success", text: `${updated.name} 최종 제출 완료! 관리자 화면에 반영돼요.` });
     } catch (e) {
@@ -754,10 +765,10 @@ function StudentTile({
   const quizDone = student.quizSuccess;
   const kindergartenDone = student.kindergartenSuccess;
   const allDone = mode === "kindergarten" ? !!kindergartenDone : done && quizDone;
-  const score = Object.values(student.lessonStates ?? {}).filter(s => s === 'success').length;
+  const score = countFestivalSuccess(student.lessonStates);
   const quizScore = Object.values(student.quizStates ?? {}).filter(s => s === 'success').length;
   const kindergartenScore = Object.values(student.kindergartenActivityStates ?? {}).filter(s => s === 'success').length;
-  const recitationCount = Object.keys(student.lessonStates ?? {}).length;
+  const recitationCount = countFestivalChecked(student.lessonStates);
   const quizCount = Object.keys(student.quizStates ?? {}).length;
   const kindergartenCount = Object.keys(student.kindergartenActivityStates ?? {}).length;
 
@@ -839,7 +850,7 @@ function StudentTile({
 }
 
 /**
- * 학생별 과(1~16) 선택 팝업 — 모바일 친화적인 바텀 시트.
+ * 학생별 대회 범위 과 선택 팝업 — 모바일 친화적인 바텀 시트.
  *  - 뒤로: 변경 없이 닫기
  *  - 완료: 선택한 과 목록으로 onComplete 콜백. 호출 측에서 success 갱신.
  *  - 배경 탭 / ESC 로도 닫힘.
@@ -922,10 +933,10 @@ function StudentLessonModal({
         {/* 색상 범례 — 처음 쓰는 선생님이 의미를 헷갈리지 않도록 */}
         <ColorLegend successLabel="성공" successColor="green" />
 
-        {/* 과 버튼 그리드 (1~16, 4열) — 필요 시 내부 스크롤 */}
+        {/* 과 버튼 그리드 — 필요 시 내부 스크롤 */}
         <div className="flex-1 overflow-y-auto px-5 pb-4">
           <div className="grid grid-cols-4 gap-2">
-            {Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1).map((n) => {
+            {FESTIVAL_RECITATION_LESSONS.map((n) => {
               const state = states[n];
               return (
                 <button
@@ -1637,12 +1648,19 @@ function ProgressBar({
 // 성공(success)한 과 번호를 "1·3·5과" 처럼 짧게 표시
 function formatLessons(states?: Record<number, 'success' | 'fail'>) {
   if (!states) return "";
-  const successLessons = Object.entries(states)
-    .filter(([_, state]) => state === 'success')
-    .map(([lesson]) => Number(lesson))
-    .sort((a, b) => a - b);
+  const successLessons = FESTIVAL_RECITATION_LESSONS.filter((lesson) => states[lesson] === "success");
   if (successLessons.length === 0) return "";
   return `${successLessons.join("·")}과`;
+}
+
+function countFestivalChecked(states: Record<number, "success" | "fail"> | undefined) {
+  if (!states) return 0;
+  return FESTIVAL_RECITATION_LESSONS.filter((lesson) => states[lesson] !== undefined).length;
+}
+
+function countFestivalSuccess(states: Record<number, "success" | "fail"> | undefined) {
+  if (!states) return 0;
+  return FESTIVAL_RECITATION_LESSONS.filter((lesson) => states[lesson] === "success").length;
 }
 
 // 정답(success)한 퀴즈 번호를 "1·3·5번" 처럼 짧게 표시

@@ -18,7 +18,13 @@ import { getFoundationAgeGroupLabel, type FoundationAgeGroup, type FoundationMat
 import { type ScheduleImage } from "@/lib/scheduleImages";
 import { extractYoutubeVideoId, type LessonVideo } from "@/lib/lessonVideos";
 
-const TOTAL_RECITATIONS = 16;
+const FESTIVAL_RECITATION_START = 17;
+const FESTIVAL_RECITATION_END = 42;
+const FESTIVAL_RECITATION_LESSONS = Array.from(
+  { length: FESTIVAL_RECITATION_END - FESTIVAL_RECITATION_START + 1 },
+  (_, i) => FESTIVAL_RECITATION_START + i
+);
+const TOTAL_RECITATIONS = FESTIVAL_RECITATION_LESSONS.length;
 const TOTAL_QUIZZES = 18;
 const TOTAL_KINDERGARTEN_LESSONS = 52;
 const KINDERGARTEN_ACTIVITY_TYPES = [
@@ -89,8 +95,9 @@ const LESSON_TITLES: Record<number, string> = {
   52: "하나님 감사해요"
 };
 
-function countSuccess(states: Record<number, "success" | "fail"> | undefined): number {
+function countSuccess(states: Record<number, "success" | "fail"> | undefined, lessons?: number[]): number {
   if (!states) return 0;
+  if (lessons) return lessons.filter((lesson) => states[lesson] === "success").length;
   return Object.values(states).filter((s) => s === "success").length;
 }
 
@@ -898,7 +905,7 @@ export default function AdminDashboardView({
           {classIds.map((classId) => {
             const group = classGroups[classId];
             const isExpanded = expandedClasses.has(classId);
-            const avgRecitation = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.lessonStates), 0) / group.students.length * 10) / 10;
+            const avgRecitation = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.lessonStates, FESTIVAL_RECITATION_LESSONS), 0) / group.students.length * 10) / 10;
             const avgQuiz = Math.round(group.students.reduce((sum, s) => sum + countSuccess(s.quizStates), 0) / group.students.length * 10) / 10;
             const avgActivity = (type: string) =>
               Math.round(group.students.reduce((sum, s) => sum + countKindergartenActivity(s, type), 0) / group.students.length * 10) / 10;
@@ -952,7 +959,7 @@ export default function AdminDashboardView({
                   <div className="border-t border-slate-700 px-4 pb-4 pt-3">
                     <div className="flex flex-col gap-2">
                       {group.students.map((student) => {
-                          const recitationScore = countSuccess(student.lessonStates);
+                          const recitationScore = countSuccess(student.lessonStates, FESTIVAL_RECITATION_LESSONS);
                           const quizScore = countSuccess(student.quizStates);
                           const attendanceCount = countKindergartenActivity(student, "KINDERGARTEN_ATTENDANCE");
                           const foundationCount = countKindergartenActivity(student, "KINDERGARTEN_FOUNDATION");
@@ -1130,7 +1137,7 @@ export default function AdminDashboardView({
                                     <>
                                       <p className="mb-2 text-xs font-bold text-emerald-400">📖 암송 (성공 {recitationScore}/{TOTAL_RECITATIONS})</p>
                                       <div className="mb-3 grid grid-cols-8 gap-1">
-                                        {Array.from({ length: TOTAL_RECITATIONS }, (_, i) => i + 1).map((n) => {
+                                        {FESTIVAL_RECITATION_LESSONS.map((n) => {
                                           const st = student.lessonStates[n];
                                           return (
                                             <div key={n} className={cn(

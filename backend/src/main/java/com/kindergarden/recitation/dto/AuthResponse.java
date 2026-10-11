@@ -11,6 +11,7 @@ import lombok.Setter;
 public class AuthResponse {
     private boolean success;
     private Long id;
+    private String loginId;
     private String name;
     private String role;
     private Long classId;
