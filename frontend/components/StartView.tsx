@@ -23,7 +23,7 @@ import FoundationView from "@/components/FoundationView";
 import LoginSlideshow from "@/components/LoginSlideshow";
 
 const ASSISTANT_TEACHER_VIDEO_ID = "";
-const RECITATION_UNLOCK_LOGIN_IDS = ["kangteacher", "kim4-1"];
+const RECITATION_UNLOCK_LOGIN_IDS = ["kangteacher", "kim4-1", "parkteacher"];
 const TEACHER_NOTICE_HIDE_DATE_KEY = "teacher_notice_hide_date";
 const TEACHER_NOTICE_READ_IDS_KEY = "teacher_notice_read_ids";
 const TEACHER_NOTICE_MUTED_KEY = "teacher_notice_muted";

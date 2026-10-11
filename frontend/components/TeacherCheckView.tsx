@@ -26,7 +26,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, CalendarDays, HelpCircle, RefreshCw, Sun, Crown, Save, Home, ClipboardCheck, User } from "lucide-react";
+import { Check, ArrowLeft, X, AlertCircle, PartyPopper, BookOpen, CalendarDays, HelpCircle, RefreshCw, Sun, Crown, Save, Home, ClipboardCheck, User, Trophy, Medal, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { api, resolveMediaUrl, type StudentRecitationDto } from "@/lib/api";
 
@@ -43,8 +43,19 @@ const TOTAL_KINDERGARTEN_ACTIVITIES = TOTAL_KINDERGARTEN_LESSONS * 3;
 const KINDERGARTEN_BASE_UNLOCK_LESSON = 19;
 const KINDERGARTEN_BASE_UNLOCK_DATE = new Date(2026, 4, 10);
 const TEACHER_DARK_MODE_KEY = "teacher_dark_mode";
-const RECITATION_UNLOCK_LOGIN_IDS = ["kangteacher", "kim4-1"];
+const RECITATION_UNLOCK_LOGIN_IDS = ["kangteacher", "kim4-1", "parkteacher"];
+const FESTIVAL_GLOBAL_LOGIN_IDS = ["kangteacher", "parkteacher"];
 type ToggleState = "success" | "fail" | undefined;
+type RankingEntry = {
+  student: StudentRecitationDto;
+  score: number;
+  recitationScore: number;
+  quizScore: number;
+  checked: number;
+  quizChecked: number;
+  fail: number;
+  rank: number;
+};
 
 function nextToggleState(current: ToggleState): ToggleState {
   if (!current) return "success";
@@ -104,7 +115,8 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
   }, [initialClassId, mode, router]);
 
   const selectedClassId = teacherInfo?.classId || initialClassId || 1;
-  const className = teacherInfo?.className || "반 정보 없음";
+  const festivalGlobalMode = mode === "festival" && FESTIVAL_GLOBAL_LOGIN_IDS.includes(teacherInfo?.loginId ?? "");
+  const className = festivalGlobalMode ? "전체 유치부" : teacherInfo?.className || "반 정보 없음";
 
   const [students, setStudents] = React.useState<StudentRecitationDto[]>([]);
   const [activeStudentId, setActiveStudentId] = React.useState<number | null>(null);
@@ -117,6 +129,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
   // 브라우저 기본 confirm/alert 대신 부드러운 모달/토스트로 대체
   const [submitConfirmStudentId, setSubmitConfirmStudentId] = React.useState<number | null>(null);
   const [toast, setToast] = React.useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [awardOpen, setAwardOpen] = React.useState(false);
 
   // 토스트 자동 사라짐 (3초)
   React.useEffect(() => {
@@ -129,7 +142,11 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     if (!teacherInfo) return;
     setRefreshing(true);
     try {
-      const data = await api.getClassRecitations(selectedClassId);
+      const data = festivalGlobalMode
+        ? (await Promise.all(
+            (await api.listClasses()).map((classItem) => api.getClassRecitations(classItem.classId))
+          )).flat()
+        : await api.getClassRecitations(selectedClassId);
       // 클라이언트에서 추가적인 success/quizSuccess 필드를 계산해준다
       const mapped = data.map(s => {
         const lCount = countFestivalChecked(s.lessonStates);
@@ -154,7 +171,7 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
     } finally {
       setRefreshing(false);
     }
-  }, [selectedClassId, teacherInfo]);
+  }, [festivalGlobalMode, selectedClassId, teacherInfo]);
 
   // 선택된 반 학생 + 오늘 상태 로드
   React.useEffect(() => {
@@ -187,6 +204,9 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
   const quizDone = students.filter((s) => isAllChecked(s.quizStates, Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1))).length;
   const kindergartenDone = students.filter((s) => Object.keys(s.kindergartenActivityStates ?? {}).length === TOTAL_KINDERGARTEN_ACTIVITIES).length;
   const totalCount = students.length;
+  const rankingEnabled = festivalGlobalMode;
+  const ranking = React.useMemo(() => buildFestivalRanking(students), [students]);
+  const hasRankingRecords = ranking.some((entry) => entry.checked + entry.quizChecked > 0);
 
   // 오늘 날짜(이번주 과)에 체크 완료했는지에 대한 오늘 기준 집계
   const weeklyLesson = getKindergartenAvailableLessonLimit();
@@ -465,6 +485,17 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
       </header>
 
       {/* 학생 프로필 그리드 */}
+      {rankingEnabled && (
+        <section className="mt-4 px-4 sm:mt-5 sm:px-5" aria-label="암송대회 실시간 랭킹">
+            <FestivalRankingPanel
+              ranking={ranking}
+              totalScore={TOTAL_RECITATIONS + TOTAL_QUIZZES}
+              hasRecords={hasRankingRecords}
+              onAward={() => setAwardOpen(true)}
+            />
+        </section>
+      )}
+
       <section className="relative mt-4 px-4 sm:mt-5 sm:px-5" aria-label="학생 선택">
         {students.length === 0 ? (
           <div className="rounded-2xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
@@ -600,6 +631,14 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
         />
       )}
 
+      {rankingEnabled && awardOpen && (
+        <AwardCeremonyModal
+          ranking={ranking}
+          totalScore={TOTAL_RECITATIONS + TOTAL_QUIZZES}
+          onClose={() => setAwardOpen(false)}
+        />
+      )}
+
       {/* 토스트 — 성공/실패 알림 */}
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 bottom-32 z-50 flex justify-center px-5">
@@ -676,6 +715,228 @@ function TeacherCheckBottomNavigation({
         })}
       </div>
     </nav>
+  );
+}
+
+function FestivalRankingPanel({
+  ranking,
+  totalScore,
+  hasRecords,
+  onAward,
+}: {
+  ranking: RankingEntry[];
+  totalScore: number;
+  hasRecords: boolean;
+  onAward: () => void;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+      <div className="bg-slate-900 px-4 py-4 text-white dark:bg-white dark:text-slate-950">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-xs font-extrabold opacity-75">
+              <Trophy className="h-4 w-4" />
+              암송대회
+            </p>
+            <h2 className="mt-1 text-lg font-extrabold">실시간 랭킹</h2>
+          </div>
+          <span className="shrink-0 rounded-full bg-white/12 px-3 py-1 text-xs font-extrabold ring-1 ring-white/15 dark:bg-slate-900/10 dark:ring-slate-900/10">
+            총 {TOTAL_RECITATIONS + TOTAL_QUIZZES}점
+          </span>
+        </div>
+        <p className="mt-2 text-xs font-bold text-white/65 dark:text-slate-600">
+          암송 1개 1점 · 퀴즈 정답 1개 1점
+        </p>
+      </div>
+
+      <div className="p-3">
+        {!hasRecords ? (
+          <p className="rounded-xl bg-slate-50 px-4 py-5 text-center text-sm font-bold text-slate-400 dark:bg-slate-800/70 dark:text-slate-500">
+            아직 암송 기록이 없습니다.
+          </p>
+        ) : (
+          <>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400">전체 순위 {ranking.length}명</p>
+              <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500">스크롤해서 모두 보기</p>
+            </div>
+            <div className="max-h-80 overflow-y-auto pr-1">
+              <div className="grid gap-2">
+                {ranking.map((entry) => (
+                  <RankingRow key={entry.student.studentId} entry={entry} totalScore={totalScore} compact={false} />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="border-t border-slate-100 p-3 dark:border-slate-800">
+        <button
+          type="button"
+          onClick={onAward}
+          disabled={!hasRecords}
+          className="flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-sm font-extrabold text-white shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:active:scale-100 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+        >
+          <Sparkles className="h-4 w-4" />
+          최종 제출하기
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function RankingRow({
+  entry,
+  totalScore,
+  compact,
+}: {
+  entry: RankingEntry;
+  totalScore: number;
+  compact: boolean;
+}) {
+  const rankTone =
+    entry.rank === 1
+      ? "bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25"
+      : entry.rank === 2
+        ? "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+        : entry.rank === 3
+          ? "bg-orange-50 text-orange-700 ring-orange-100 dark:bg-orange-500/15 dark:text-orange-200 dark:ring-orange-500/25"
+          : "bg-blue-50 text-blue-700 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-500/25";
+
+  return (
+    <div className={cn("flex items-center gap-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:ring-slate-700", compact && "p-2.5")}>
+      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold ring-1", rankTone)}>
+        {entry.rank}등
+      </span>
+      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-white bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <StudentAvatar name={entry.student.name} photoUrl={entry.student.photoUrl} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-extrabold text-slate-800 dark:text-slate-100">{entry.student.name}</p>
+        <p className="mt-0.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+          암송 {entry.recitationScore}/{TOTAL_RECITATIONS} · 퀴즈 {entry.quizScore}/{TOTAL_QUIZZES}
+        </p>
+      </div>
+      <span className="shrink-0 text-lg font-extrabold text-slate-900 dark:text-white">{entry.score}/{totalScore}</span>
+    </div>
+  );
+}
+
+function AwardCeremonyModal({
+  ranking,
+  totalScore,
+  onClose,
+}: {
+  ranking: RankingEntry[];
+  totalScore: number;
+  onClose: () => void;
+}) {
+  const winners = ranking.filter((entry) => entry.rank <= 3 && entry.checked + entry.quizChecked > 0);
+
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="award-title"
+      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <section className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl bg-white shadow-soft dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
+        <div className="relative overflow-hidden bg-slate-950 px-5 pb-6 pt-7 text-center text-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15 active:scale-95"
+            aria-label="시상식 닫기"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-400 text-slate-950 shadow-sm">
+            <Trophy className="h-9 w-9" />
+          </div>
+          <p className="mt-4 text-xs font-extrabold tracking-[0.18em] text-amber-200">RECITATION AWARDS</p>
+          <h2 id="award-title" className="mt-1 text-2xl font-extrabold">암송대회 시상식</h2>
+          <p className="mt-2 text-sm font-bold text-white/70">{FESTIVAL_RECITATION_START}과부터 {FESTIVAL_RECITATION_END}과까지 실시간 결과입니다.</p>
+        </div>
+
+        <div className="grid gap-3 p-4">
+          {winners.length === 0 ? (
+            <p className="rounded-2xl bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+              아직 시상할 기록이 없습니다.
+            </p>
+          ) : (
+            winners.map((entry) => (
+              <div
+                key={entry.student.studentId}
+                className={cn(
+                  "rounded-2xl p-4 ring-1",
+                  entry.rank === 1
+                    ? "bg-amber-50 ring-amber-100 dark:bg-amber-500/15 dark:ring-amber-500/25"
+                    : entry.rank === 2
+                      ? "bg-slate-50 ring-slate-200 dark:bg-slate-800/80 dark:ring-slate-700"
+                      : "bg-orange-50 ring-orange-100 dark:bg-orange-500/15 dark:ring-orange-500/25"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-800 shadow-sm ring-1 ring-black/5 dark:bg-slate-900 dark:text-white dark:ring-white/10">
+                    {entry.rank === 1 ? <Crown className="h-7 w-7 text-amber-500" /> : <Medal className="h-7 w-7" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400">{entry.rank}등</p>
+                    <h3 className="truncate text-xl font-extrabold text-slate-900 dark:text-white">{entry.student.name}</h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{entry.score}</p>
+                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">/{totalScore}</p>
+                  </div>
+                </div>
+                <p className="mt-3 rounded-xl bg-white/65 px-3 py-2 text-center text-xs font-extrabold text-slate-600 ring-1 ring-black/5 dark:bg-slate-950/25 dark:text-slate-300 dark:ring-white/10">
+                  암송 {entry.recitationScore}점 + 퀴즈 {entry.quizScore}점
+                </p>
+              </div>
+            ))
+          )}
+
+          <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-slate-800/70 dark:ring-slate-700">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400">전체 순위 {ranking.length}명</p>
+              <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500">스크롤</p>
+            </div>
+            <div className="max-h-72 overflow-y-auto pr-1">
+              <div className="grid gap-2">
+                {ranking.map((entry) => (
+                  <RankingRow key={entry.student.studentId} entry={entry} totalScore={totalScore} compact />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-12 rounded-xl bg-slate-900 text-base font-extrabold text-white shadow-sm transition active:scale-[0.98] dark:bg-white dark:text-slate-950"
+          >
+            확인
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -811,6 +1072,9 @@ function StudentTile({
         </div>
         <div className="flex flex-col items-center">
           <span className="text-xs font-extrabold text-slate-800 sm:text-sm dark:text-slate-100">{student.name}</span>
+          {mode === "festival" && (
+            <span className="mt-0.5 max-w-full truncate text-[10px] font-bold text-slate-400 dark:text-slate-500">{student.className}</span>
+          )}
           <div className="mt-0.5 flex items-center gap-1">
             {mode === "kindergarten" ? (
               kindergartenDone ? (
@@ -1661,6 +1925,55 @@ function countFestivalChecked(states: Record<number, "success" | "fail"> | undef
 function countFestivalSuccess(states: Record<number, "success" | "fail"> | undefined) {
   if (!states) return 0;
   return FESTIVAL_RECITATION_LESSONS.filter((lesson) => states[lesson] === "success").length;
+}
+
+function countQuizChecked(states: Record<number, "success" | "fail"> | undefined) {
+  if (!states) return 0;
+  return Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1)
+    .filter((quiz) => states[quiz] !== undefined).length;
+}
+
+function countQuizSuccess(states: Record<number, "success" | "fail"> | undefined) {
+  if (!states) return 0;
+  return Array.from({ length: TOTAL_QUIZZES }, (_, i) => i + 1)
+    .filter((quiz) => states[quiz] === "success").length;
+}
+
+function buildFestivalRanking(students: StudentRecitationDto[]): RankingEntry[] {
+  const sorted = students
+    .map((student) => {
+      const recitationScore = countFestivalSuccess(student.lessonStates);
+      const quizScore = countQuizSuccess(student.quizStates);
+      const checked = countFestivalChecked(student.lessonStates);
+      const quizChecked = countQuizChecked(student.quizStates);
+      return {
+        student,
+        score: recitationScore + quizScore,
+        recitationScore,
+        quizScore,
+        checked,
+        quizChecked,
+        fail: Math.max(0, checked - recitationScore) + Math.max(0, quizChecked - quizScore),
+        rank: 0,
+      };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.recitationScore !== a.recitationScore) return b.recitationScore - a.recitationScore;
+      if (b.quizScore !== a.quizScore) return b.quizScore - a.quizScore;
+      if (b.checked + b.quizChecked !== a.checked + a.quizChecked) return (b.checked + b.quizChecked) - (a.checked + a.quizChecked);
+      return a.student.name.localeCompare(b.student.name, "ko");
+    });
+
+  let previousScore: number | null = null;
+  let previousRank = 0;
+
+  return sorted.map((entry, index) => {
+    const rank = previousScore === entry.score ? previousRank : index + 1;
+    previousScore = entry.score;
+    previousRank = rank;
+    return { ...entry, rank };
+  });
 }
 
 // 정답(success)한 퀴즈 번호를 "1·3·5번" 처럼 짧게 표시
