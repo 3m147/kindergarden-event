@@ -43,7 +43,6 @@ const TOTAL_KINDERGARTEN_ACTIVITIES = TOTAL_KINDERGARTEN_LESSONS * 3;
 const KINDERGARTEN_BASE_UNLOCK_LESSON = 19;
 const KINDERGARTEN_BASE_UNLOCK_DATE = new Date(2026, 4, 10);
 const TEACHER_DARK_MODE_KEY = "teacher_dark_mode";
-const RECITATION_UNLOCK_LOGIN_IDS = ["kangteacher", "kim4-1", "parkteacher"];
 const FESTIVAL_GLOBAL_LOGIN_IDS = ["kangteacher", "parkteacher"];
 type ToggleState = "success" | "fail" | undefined;
 type RankingEntry = {
@@ -104,10 +103,6 @@ export default function TeacherCheckView({ initialClassId, mode = "festival" }: 
 
     if (info) {
       const parsedInfo = JSON.parse(info);
-      if (mode === "festival" && !RECITATION_UNLOCK_LOGIN_IDS.includes(parsedInfo?.loginId ?? "")) {
-        router.replace(`/check/${parsedInfo?.classId || initialClassId || 1}?mode=kindergarten`);
-        return;
-      }
       setTeacherInfo(parsedInfo);
     } else {
       router.push("/");

@@ -23,7 +23,6 @@ import FoundationView from "@/components/FoundationView";
 import LoginSlideshow from "@/components/LoginSlideshow";
 
 const ASSISTANT_TEACHER_VIDEO_ID = "";
-const RECITATION_UNLOCK_LOGIN_IDS = ["kangteacher", "kim4-1", "parkteacher"];
 const TEACHER_NOTICE_HIDE_DATE_KEY = "teacher_notice_hide_date";
 const TEACHER_NOTICE_READ_IDS_KEY = "teacher_notice_read_ids";
 const TEACHER_NOTICE_MUTED_KEY = "teacher_notice_muted";
@@ -368,7 +367,6 @@ export default function StartView() {
 
   const openTeacherMode = (mode: "festival" | "kindergarten") => {
     if (!loggedIn) return;
-    if (mode === "festival" && !RECITATION_UNLOCK_LOGIN_IDS.includes(loggedIn.loginId ?? "")) return;
     router.push(`/check/${loggedIn.classId}?mode=${mode}`);
   };
 
@@ -523,7 +521,6 @@ export default function StartView() {
   // 로그인 성공 후 선생님이 사용할 화면 선택
   if (loggedIn) {
     const showAssistantVideo = loggedIn.role === "부교사" && ASSISTANT_TEACHER_VIDEO_ID.length > 0;
-    const recitationUnlocked = RECITATION_UNLOCK_LOGIN_IDS.includes(loggedIn.loginId ?? "");
 
     return (
       <main className={cn("mx-auto flex min-h-[100dvh] w-full max-w-md md:max-w-3xl lg:max-w-5xl flex-col items-center bg-slate-100 px-4 pb-[calc(max(env(safe-area-inset-bottom),1.5rem)+5.75rem)] text-slate-900 transition-colors sm:px-5 dark:bg-[#0b1120] dark:text-slate-100", teacherDarkMode && "dark")}>
@@ -621,7 +618,6 @@ export default function StartView() {
           </header>
           {isHomeTab && (
             <TeacherModeLauncher
-              festivalUnlocked={recitationUnlocked}
               onKindergarten={() => openTeacherMode("kindergarten")}
               onFestival={() => openTeacherMode("festival")}
             />
@@ -1016,11 +1012,9 @@ export default function StartView() {
 }
 
 function TeacherModeLauncher({
-  festivalUnlocked,
   onKindergarten,
   onFestival,
 }: {
-  festivalUnlocked: boolean;
   onKindergarten: () => void;
   onFestival: () => void;
 }) {
@@ -1040,20 +1034,13 @@ function TeacherModeLauncher({
       <button
         type="button"
         onClick={onFestival}
-        disabled={!festivalUnlocked}
-        aria-disabled={!festivalUnlocked}
-        className={cn(
-          "flex min-h-[5.75rem] flex-col justify-between rounded-2xl p-4 text-left shadow-sm ring-1 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100",
-          festivalUnlocked
-            ? "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25"
-            : "bg-slate-100 text-slate-400 ring-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:ring-slate-700"
-        )}
+        className="flex min-h-[5.75rem] flex-col justify-between rounded-2xl bg-emerald-50 p-4 text-left text-emerald-700 shadow-sm ring-1 ring-emerald-100 transition active:scale-[0.98] dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25"
       >
-        {festivalUnlocked ? <Check className="h-6 w-6" /> : <LockKeyhole className="h-6 w-6" />}
+        <Check className="h-6 w-6" />
         <span>
           <span className="block break-keep text-base font-extrabold leading-5">유치부 암송</span>
           <span className="mt-1 block break-keep text-xs font-bold opacity-75">
-            {festivalUnlocked ? "암송잔치 체크" : "허용 계정 전용"}
+            암송잔치 체크
           </span>
         </span>
       </button>
